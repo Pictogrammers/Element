@@ -62,7 +62,20 @@ export default class HelloWorld extends HTMLElement {
 
 ## Advanced
 
-Extending components can let you create building blocks that can be extended.
+Starting with a simple component can allow one to extend it with more features later on. This can be done by extending components.
+
+```
+📂 src/
+  📂 hello/
+    📂 world/
+      📃 world.ts
+      📃 world.html
+      📃 world.css
+    📂 worldButton/
+      📃 worldButton.ts
+      📃 worldButton.html
+      📃 worldButton.css
+```
 
 ```typescript
 import { Component, Prop, Part } from '@mdi/element';
@@ -90,6 +103,14 @@ export default class MdiIconTooltip extends MdiIcon {
 
 ```html
 <button part="button">
-  <parent/>
+  <parent/> <!-- <div>Default!</div> -->
 </button>
+```
+
+```css
+[part~=button] {
+  border-radius: 0.25rem;
+  border: #ddd;
+  color: #222;
+}
 ```
