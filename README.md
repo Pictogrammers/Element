@@ -58,6 +58,9 @@ export default class HelloWorld extends HTMLElement {
 :host {
   display: block;
 }
+[part~=div] {
+  /* Style Part */
+}
 ```
 
 ## Advanced
