@@ -97,7 +97,6 @@ import template from './worldButton.html';
 export default class HelloWorldButton extends HelloWorld {
   @Part() $button: HTMLButtonElement;
 
-  // Example: Custom rendering
   renderCallback() {
     this.$button.addEventListener('click', () => {
       alert(this.message);
