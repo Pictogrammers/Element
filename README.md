@@ -8,18 +8,18 @@ npm install @mdi/element
 
 ## Basics
 
-To make things easier setup the project assuming the custom element `<hello-world>`.
+To make things easier setup the project assuming the custom element `<hello-world message="Hello World!"></hello-world>`.
 
 ```
-src/
-  hello/
-    world/
-      world.ts
-      world.html
-      world.css
-rollup.config.js
-tsconfig.json
-package.json
+📂 src/
+  📂 hello/
+    📂 world/
+      📃 world.ts
+      📃 world.html
+      📃 world.css
+📃 rollup.config.js
+📃 tsconfig.json
+📃 package.json
 ```
 
 ### Class (`world.ts`)
@@ -36,14 +36,20 @@ import style from './world.css';
   template
 })
 export default class HelloWorld extends HTMLElement {
-  // Code
+  @Prop() message = 'Hello World';
+  
+  @Part() $div: HTMLDiv;
+  
+  render() {
+    this.$div.innerText = `this.message;
+  }
 }
 ```
 
 ### Template (`world.html`)
 
 ```html
-<div>Hello World!</div>
+<div>Default!</div>
 ```
 
 ### CSS Styles (`world.css`)
