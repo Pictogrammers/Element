@@ -77,12 +77,14 @@ Starting with a simple component can allow one to extend it with more features l
       📃 worldButton.css
 ```
 
+### TypeScript (`worldButton.ts`)
+
 ```typescript
 import { Component, Prop, Part } from '@mdi/element';
 import HelloWorld from '../world/world';
 
-import style from './button.css';
-import template from './button.html';
+import style from './worldButton.css';
+import template from './worldButton.html';
 
 @Component({
   selector: 'hello-world-button',
@@ -101,11 +103,15 @@ export default class MdiIconTooltip extends MdiIcon {
 }
 ```
 
+### Template (`worldButton.html`)
+
 ```html
 <button part="button">
   <parent/> <!-- <div>Default!</div> -->
 </button>
 ```
+
+### CSS Styles (`worldButton.css`)
 
 ```css
 [part~=button] {
