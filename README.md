@@ -91,7 +91,7 @@ import template from './worldButton.html';
   style,
   template
 })
-export default class MdiIconTooltip extends MdiIcon {
+export default class HelloWorldButton extends HelloWorld {
   @Part() $button: HTMLButtonElement;
 
   // Example: Custom rendering
