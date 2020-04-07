@@ -17,6 +17,9 @@ src/
       world.ts
       world.html
       world.css
+rollup.config.js
+tsconfig.json
+package.json
 ```
 
 ### Class (`world.ts`)
