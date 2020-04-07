@@ -38,7 +38,7 @@ import style from './world.css';
 export default class HelloWorld extends HTMLElement {
   @Prop() message = 'Hello World';
   
-  @Part() $div: HTMLDiv;
+  @Part() $div: HTMLDivElement;
   
   render() {
     this.$div.innerText = `this.message;
@@ -49,7 +49,7 @@ export default class HelloWorld extends HTMLElement {
 ### Template (`world.html`)
 
 ```html
-<div>Default!</div>
+<div part="div">Default!</div>
 ```
 
 ### CSS Styles (`world.css`)
@@ -64,4 +64,32 @@ export default class HelloWorld extends HTMLElement {
 
 Extending components can let you create building blocks that can be extended.
 
-...
+```typescript
+import { Component, Prop, Part } from '@mdi/element';
+import HelloWorld from '../world/world';
+
+import style from './button.css';
+import template from './button.html';
+
+@Component({
+  selector: 'hello-world-button',
+  style,
+  template
+})
+export default class MdiIconTooltip extends MdiIcon {
+  @Part() $button: HTMLButtonElement;
+
+  // Example: Custom rendering
+  renderCallback() {
+    this.$button.addEventListener('click', () => {
+      alert(this.message);
+    });
+  }
+}
+```
+
+```html
+<button part="button">
+  <parent/>
+</button>
+```
