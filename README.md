@@ -25,7 +25,7 @@ package.json
 ### Class (`world.ts`)
 
 ```typescript
-import { Component, Prop, Part, Bind } from '@mdi/element';
+import { Component, Prop, Part } from '@mdi/element';
 
 import template from "./world.html";
 import style from './world.css';
