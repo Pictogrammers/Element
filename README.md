@@ -31,7 +31,7 @@ import template from "./world.html";
 import style from './world.css';
 
 @Component({
-  selector: 'mdi-icon',
+  selector: 'hello-world',
   style,
   template
 })
