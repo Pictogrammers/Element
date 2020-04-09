@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "module": "ES6",
+    "target": "ES2017",
+    "declaration": true,
+    "experimentalDecorators": true,
+    "strictNullChecks": true,
+    "outDir": "dist",
+    "esModuleInterop": true
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/__tests__/*"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@mdi/element",
+  "version": "0.1.0",
+  "description": "Web Component Element for TypeScript",
+  "main": "dist/element.js",
+  "types": "dist/element.d.ts",
+  "files": [
+    "lib/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Templarian/Element.git"
+  },
+  "keywords": [
+    "web",
+    "component",
+    "htmlelement"
+  ],
+  "author": "Austin Andrews",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Templarian/Element/issues"
+  },
+  "homepage": "https://github.com/Templarian/Element#readme",
+  "devDependencies": {
+    "typescript": "^3.8.3"
+  }
+}
