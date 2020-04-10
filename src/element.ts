@@ -24,7 +24,7 @@ interface CustomElementConfig {
   }
   
   export function Component(config: CustomElementConfig) {
-    return function (cls) {
+    return function (cls: any) {
       if (cls.prototype[parent]) {
         cls.prototype[parent].push(cls.prototype);
         cls.prototype[style] = `${cls.prototype[style]}${config.style}`;
@@ -66,7 +66,7 @@ interface CustomElementConfig {
         if (this.componentWillMount) {
           this.componentWillMount();
         }
-        this[parent].map(p => {
+        this[parent].map((p: any) => {
           if (p.render) {
             p.render.call(this);
           }
@@ -88,7 +88,7 @@ interface CustomElementConfig {
         }
       };
   
-      cls.prototype.attributeChangedCallback = function (name, oldValue, newValue) {
+      cls.prototype.attributeChangedCallback = function (name: string, oldValue: string|null, newValue: string|null) {
         this[name] = newValue;
         if (this.attributeChangedCallback) {
           this.attributeChangedCallback(name, oldValue, newValue);
@@ -103,8 +103,8 @@ interface CustomElementConfig {
   
   const transmute = Symbol('transmute');
   
-  export function TransmutePart(part, selector) {
-    return function (cls) {
+  export function TransmutePart(part: string, selector: string) {
+    return function (cls: any) {
       if (cls.prototype[transmute]) {
         cls.prototype[transmute][part] = selector;
       } else {
@@ -123,7 +123,7 @@ interface CustomElementConfig {
       if (!constructor.symbols) {
         constructor.symbols = {};
       }
-      const { symbols } = constructor as Constructor;
+      const { symbols }: { symbols: any } = constructor as Constructor;
       observedAttributes.push(propertyKey);
       const symbol = Symbol(propertyKey);
       symbols[propertyKey] = symbol;
@@ -134,7 +134,7 @@ interface CustomElementConfig {
         set(value: string) {
           this[symbol] = value;
           if (this[init]) {
-            this[parent].map(p => {
+            this[parent].map((p: any) => {
               if (p.render) {
                 p.render.call(this);
               }
@@ -163,8 +163,8 @@ interface CustomElementConfig {
    * @param attribute Ex: 'innerText'
    * @param value Ex: this.value
    */
-  export function Bind(part, attribute, value): Function {
+  /*export function Bind(part, attribute, value): Function {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
       
     };
-  }
+  }*/

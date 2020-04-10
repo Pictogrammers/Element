@@ -1,11 +1,11 @@
 {
   "name": "@mdi/element",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Web Component Element for TypeScript",
   "main": "dist/element.js",
   "types": "dist/element.d.ts",
   "files": [
-    "lib/**/*"
+    "dist/**/*"
   ],
   "scripts": {
     "build": "tsc",
