@@ -1,14 +1,19 @@
 {
   "name": "@mdi/element",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Web Component Element for TypeScript",
-  "main": "dist/element.js",
+  "module": "dist/element.esm.js",
+  "main": "dist/element.common.js",
   "types": "dist/element.d.ts",
   "files": [
     "dist/**/*"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:common && npm run build:rename:common && npm run build:esm && npm run build:rename:esm",
+    "build:rename:common": "node -e \"require('fs').rename('dist/element.js', 'dist/element.common.js', () => {})\"",
+    "build:rename:esm": "node -e \"require('fs').rename('dist/element.js', 'dist/element.esm.js', () => {})\"",
+    "build:common": "tsc -p tsconfig.common.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
