@@ -90,9 +90,9 @@ export function Component(config: CustomElementConfig) {
 
     cls.prototype.attributeChangedCallback = function (name: string, oldValue: string|null, newValue: string|null) {
       this[name] = newValue;
-      if (this.attributeChangedCallback) {
-        this.attributeChangedCallback(name, oldValue, newValue);
-      }
+      // if (this.attributeChangedCallback) {
+        // this.attributeChangedCallback(name, oldValue, newValue);
+      // }
     };
 
     if (!window.customElements.get(config.selector)) {

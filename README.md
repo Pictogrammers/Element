@@ -122,3 +122,15 @@ export default class HelloWorldButton extends HelloWorld {
   color: #222;
 }
 ```
+
+## Development
+
+```
+# Build
+npm run build
+# View files in dist/
+# Then link for use locally
+npm link
+# Within a local project directory
+npm link @mdi/element
+```
