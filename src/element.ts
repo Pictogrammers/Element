@@ -156,14 +156,18 @@ export function Part(): any {
   };
 }
 
-export function Local(key?: string, initialValue: string | null = null): any {
+export function Local(initialValue: string | null = null, key?: string): any {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const k = (key === '' ? propertyKey : key) as string;
+    const getKey = (self: any) => {
+      return (key ? key : `${self.constructor.name}:${propertyKey}`) as string;
+    };
     Object.defineProperty(target, propertyKey, {
       get() {
+        const k = getKey(this);
         return window.localStorage.getItem(k) || initialValue;
       },
       set(value: string | null) {
+        const k = getKey(this);
         if (value === null) {
           window.localStorage.removeItem(k);
         } else {
