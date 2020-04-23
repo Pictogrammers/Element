@@ -155,3 +155,21 @@ export function Part(): any {
     });
   };
 }
+
+export function Local(key?: string, initialValue: string | null = null): any {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    const k = (key === '' ? propertyKey : key) as string;
+    Object.defineProperty(target, propertyKey, {
+      get() {
+        return window.localStorage.getItem(k) || initialValue;
+      },
+      set(value: string | null) {
+        if (value === null) {
+          window.localStorage.removeItem(k);
+        } else {
+          window.localStorage.setItem(k, value);
+        }
+      }
+    });
+  };
+}
