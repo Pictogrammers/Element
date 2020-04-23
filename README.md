@@ -123,6 +123,17 @@ export default class HelloWorldButton extends HelloWorld {
 }
 ```
 
+### `@Local(initialValue[, key])`
+
+To access localStorage values bind them to variable.
+
+```js
+// Default to 42
+@Local('42') foo;
+// Default to 42 and share a global key
+@Local('42', 'sharedKeyName') foo;
+```
+
 ## Development
 
 ```
