@@ -6,6 +6,8 @@ Simple TypeScript wrapper for creating a Web Component.
 npm install @mdi/element
 ```
 
+Example Usage: [MaterialDesign-Components](https://github.com/Templarian/MaterialDesign-Components)
+
 ## Basics
 
 To make things easier setup the project assuming the custom element `<hello-world message="Hello World!"></hello-world>`.
