@@ -68,7 +68,12 @@ export function Component(config: CustomElementConfig) {
       }
       this[parent].map((p: any) => {
         if (p.render) {
-          p.render.call(this);
+          p.render.call(
+            this,
+            cls.observedAttributes
+              ? cls.observedAttributes.reduce((a: any, c: string) => {a[c] = true; return a;}, {})
+              : {}
+          );
         }
       });
       this[init] = true;
@@ -136,7 +141,7 @@ export function Prop(): any {
         if (this[init]) {
           this[parent].map((p: any) => {
             if (p.render) {
-              p.render.call(this);
+              p.render.call(this, { [propertyKey]: true });
             }
           });
         }
