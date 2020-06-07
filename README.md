@@ -43,7 +43,7 @@ export default class HelloWorld extends HTMLElement {
   @Part() $message: HTMLDivElement;
   
   render() {
-    this.$message.innerText = `this.message;
+    this.$message.innerText = this.message;
   }
 }
 ```
