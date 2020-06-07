@@ -42,8 +42,10 @@ export default class HelloWorld extends HTMLElement {
   
   @Part() $message: HTMLDivElement;
   
-  render() {
-    this.$message.innerText = this.message;
+  render(changes) {
+    if (changes.message) {
+      this.$message.innerText = this.message;
+    }
   }
 }
 ```
