@@ -40,10 +40,10 @@ import style from './world.css';
 export default class HelloWorld extends HTMLElement {
   @Prop() message = 'Hello World';
   
-  @Part() $div: HTMLDivElement;
+  @Part() $message: HTMLDivElement;
   
   render() {
-    this.$div.innerText = `this.message;
+    this.$message.innerText = `this.message;
   }
 }
 ```
@@ -51,7 +51,7 @@ export default class HelloWorld extends HTMLElement {
 ### Template (`world.html`)
 
 ```html
-<div part="div">Default!</div>
+<div part="message">Default!</div>
 ```
 
 ### CSS Styles (`world.css`)
@@ -60,7 +60,7 @@ export default class HelloWorld extends HTMLElement {
 :host {
   display: block;
 }
-[part~=div] {
+[part~=message] {
   /* Style Part */
 }
 ```
