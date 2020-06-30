@@ -186,3 +186,13 @@ export function Local(initialValue: string | null = null, key?: string): any {
     });
   };
 }
+
+// JEST
+
+export function selectComponent<T>(tag: string): T {
+  return document.querySelector(tag) as any;
+}
+
+export function selectPart<T>(component: HTMLElement, name: string): T {
+  return component.shadowRoot!.querySelector(`[part=${name}]`) as any;
+}
