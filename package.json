@@ -1,6 +1,6 @@
 {
   "name": "@mdi/element",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Web Component Element for TypeScript",
   "module": "./dist/element.esm.js",
   "main": "./dist/element.common.js",

@@ -61,9 +61,10 @@ export function Component(config: CustomElementConfig) {
           style.appendChild(document.createTextNode(config.style));
           this.appendChild(style);
         }*/
-      } else if (this[init] && config.template) {
-        throw new Error('template from base class cannot be overriden. Fix: remove template from @Component');
-      } else if (config.template) {
+      // } else if (this[init] && config.template) {
+        // This is allowed now via <parent/>
+        // throw new Error('template from base class cannot be overriden. Fix: remove template from @Component');
+      } else if (this[init] && !config.template) {
         throw new Error('You need to pass a template for the element');
       }
 
