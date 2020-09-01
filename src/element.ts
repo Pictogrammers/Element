@@ -23,6 +23,14 @@ function extendTemplate(base: string, append: string | null) {
   }
 }
 
+function camelToDash(str: string): string {
+  return str.replace(/([a-zA-Z])(?=[A-Z])/g, '$1-').toLowerCase()
+}
+
+function dashToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, m => m[1].toUpperCase());
+}
+
 export function Component(config: CustomElementConfig) {
   return function (cls: any) {
     if (cls.prototype[parent]) {
@@ -61,7 +69,7 @@ export function Component(config: CustomElementConfig) {
           style.appendChild(document.createTextNode(config.style));
           this.appendChild(style);
         }*/
-      // } else if (this[init] && config.template) {
+        // } else if (this[init] && config.template) {
         // This is allowed now via <parent/>
         // throw new Error('template from base class cannot be overriden. Fix: remove template from @Component');
       } else if (this[init] && !config.template) {
@@ -76,7 +84,11 @@ export function Component(config: CustomElementConfig) {
           p.render.call(
             this,
             cls.observedAttributes
-              ? cls.observedAttributes.reduce((a: any, c: string) => {a[c] = true; return a;}, {})
+              ? cls.observedAttributes.reduce((a: any, c: string) => {
+                const n = dashToCamel(c);
+                a[n] = true;
+                return a;
+              }, {})
               : {}
           );
         }
@@ -98,11 +110,9 @@ export function Component(config: CustomElementConfig) {
       }
     };
 
-    cls.prototype.attributeChangedCallback = function (name: string, oldValue: string|null, newValue: string|null) {
-      this[name] = newValue;
-      // if (this.attributeChangedCallback) {
-        // this.attributeChangedCallback(name, oldValue, newValue);
-      // }
+    cls.prototype.attributeChangedCallback = function (name: string, oldValue: string | null, newValue: string | null) {
+      const normalizedName = dashToCamel(name);
+      this[normalizedName] = newValue;
     };
 
     if (!window.customElements.get(config.selector)) {
@@ -134,7 +144,8 @@ export function Prop(): any {
       constructor.symbols = {};
     }
     const { symbols }: { symbols: any } = constructor as Constructor;
-    observedAttributes.push(propertyKey);
+    const normalizedPropertyKey = camelToDash(propertyKey);
+    constructor.observedAttributes = observedAttributes.concat([normalizedPropertyKey]);
     const symbol = Symbol(propertyKey);
     symbols[propertyKey] = symbol;
     Object.defineProperty(target, propertyKey, {
