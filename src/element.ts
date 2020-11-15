@@ -199,6 +199,40 @@ export function Local(initialValue: string | null = null, key?: string): any {
   };
 }
 
+// Utils
+
+interface TemplateAttribute {
+  [part: string]: Function | string | number | null
+}
+
+interface TemplatePart {
+  [part: string]: TemplateAttribute
+}
+
+export function node<T>(template: string, init: TemplatePart): T {
+  const $template = document.createElement('template');
+  $template.innerHTML = template;
+  const $node = document.importNode($template.content, true);
+  for (const [part, attributes] of Object.entries(init)) {
+    const $part = $node.querySelector<any>(`[part~="${part}"]`);
+    if ($part) {
+      for (const [prop, value] of Object.entries(attributes)) {
+        if (value instanceof Function) {
+          const val = value();
+          if (val === null) {
+            $part.removeAttribute(prop);
+          } else {
+            $part.setAttribute(prop, value());
+          }
+        } else {
+          $part[prop] = value;
+        }
+      }
+    }
+  }
+  return $node as any;
+}
+
 // JEST
 
 export function selectComponent<T>(tag: string): T {
