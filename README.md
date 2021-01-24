@@ -149,3 +149,26 @@ npm link
 # Within a local project directory
 npm link @mdi/element
 ```
+
+## Other
+
+Some other notes about unique use cases that are handled.
+
+### Optional `Component()` Config
+
+Utility base classes can be defined without a config. These are rarely used, but are supported.
+
+```typescript
+import { Component } from '@mdi/element';
+
+@Component()
+export default class HelloOverlay extends HtmlElement {
+  static open() {
+
+  }
+
+  close() {
+
+  }
+}
+```

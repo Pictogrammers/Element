@@ -1,5 +1,5 @@
 interface CustomElementConfig {
-  selector: string;
+  selector?: string;
   template?: string;
   style?: string;
   useShadow?: boolean;
@@ -31,7 +31,7 @@ function dashToCamel(str: string): string {
   return str.replace(/-([a-z])/g, m => m[1].toUpperCase());
 }
 
-export function Component(config: CustomElementConfig) {
+export function Component(config: CustomElementConfig = {}) {
   return function (cls: any) {
     if (cls.prototype[parent]) {
       cls.prototype[parent].push(cls.prototype);
@@ -54,7 +54,13 @@ export function Component(config: CustomElementConfig) {
     const disconnectedCallback = cls.prototype.disconnectedCallback || (() => { });
 
     cls.prototype.connectedCallback = function () {
-      if (!this[init] && config.template) {
+      if (!this[init] && !config.template) {
+        if (config.useShadow === false) {
+          // Base class with no template
+        } else {
+          this.attachShadow({ mode: 'open' });
+        }
+      } else if (!this[init] && config.template) {
         const $template = document.createElement('template');
         $template.innerHTML = `${cls.prototype[template]}<style>${cls.prototype[style]}</style>`;
         const $node = document.importNode($template.content, true);
@@ -73,7 +79,7 @@ export function Component(config: CustomElementConfig) {
         // This is allowed now via <parent/>
         // throw new Error('template from base class cannot be overriden. Fix: remove template from @Component');
       } else if (this[init] && !config.template) {
-        throw new Error('You need to pass a template for the element');
+        throw new Error('You need to pass a template for an extended element.');
       }
 
       if (this.componentWillMount) {
@@ -115,7 +121,7 @@ export function Component(config: CustomElementConfig) {
       this[normalizedName] = newValue;
     };
 
-    if (!window.customElements.get(config.selector)) {
+    if (config.selector && !window.customElements.get(config.selector)) {
       window.customElements.define(config.selector, cls);
     }
   };
