@@ -3,10 +3,10 @@
 Simple TypeScript wrapper for creating a Web Component.
 
 ```bash
-npm install @mdi/element
+npm install @pictogrammers/element
 ```
 
-Example Usage: [Element-Hello-World](https://github.com/Templarian/Element-Hello-World)
+Example Usage: [Element-Hello-World](https://github.com/Pictogrammers/Element-Hello-World)
 
 ## Basics
 
@@ -27,7 +27,7 @@ To make things easier setup the project assuming the custom element `<hello-worl
 ### Class (`world.ts`)
 
 ```typescript
-import { Component, Prop, Part } from '@mdi/element';
+import { Component, Prop, Part } from '@pictogrammers/element';
 
 import template from "./world.html";
 import style from './world.css';
@@ -87,7 +87,7 @@ Starting with a simple component can allow one to extend it with more features l
 ### TypeScript (`worldButton.ts`)
 
 ```typescript
-import { Component, Prop, Part } from '@mdi/element';
+import { Component, Prop, Part } from '@pictogrammers/element';
 import HelloWorld from '../world/world';
 
 import style from './worldButton.css';
@@ -147,7 +147,7 @@ npm run build
 # Then link for use locally
 npm link
 # Within a local project directory
-npm link @mdi/element
+npm link @pictogrammers/element
 ```
 
 ## Other
@@ -159,7 +159,7 @@ Some other notes about unique use cases that are handled.
 Utility base classes can be defined without a config. These are rarely used, but are supported.
 
 ```typescript
-import { Component } from '@mdi/element';
+import { Component } from '@pictogrammers/element';
 
 @Component()
 export default class HelloOverlay extends HtmlElement {

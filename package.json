@@ -1,5 +1,5 @@
 {
-  "name": "@mdi/element",
+  "name": "@pictogrammers/element",
   "version": "0.0.20",
   "description": "Web Component Element for TypeScript",
   "module": "./dist/element.esm.js",
