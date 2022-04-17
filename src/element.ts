@@ -248,3 +248,8 @@ export function selectComponent<T>(tag: string): T {
 export function selectPart<T>(component: HTMLElement, name: string): T {
   return component.shadowRoot!.querySelector(`[part=${name}]`) as any;
 }
+
+export function getAttributes(tag: string): string[] {
+  const { symbols } = customElements.get(tag) as any;
+  return Object.keys(symbols);
+}
