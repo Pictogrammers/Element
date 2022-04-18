@@ -172,3 +172,9 @@ export default class HelloOverlay extends HtmlElement {
   }
 }
 ```
+
+### Jest Utils
+
+- `selectComponent<T>(tag: string): T`
+- `selectPart<T>(component: HTMLElement, name: string): T`
+- `getProps(tag: string): string[]`
