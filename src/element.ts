@@ -32,7 +32,7 @@ function dashToCamel(str: string): string {
 }
 
 export function Component(config: CustomElementConfig = {}) {
-  return function (cls: any) {
+  return function (cls: any, _context?: any) {
     if (cls.prototype[parent]) {
       cls.prototype[parent].push(cls.prototype);
       cls.prototype[style] = `${cls.prototype[style]}${config.style}`;
@@ -174,6 +174,9 @@ export function Prop(): any {
 
 export function Part(): any {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    if(descriptor) {
+      throw `Invalid, value must be undefined \`@Part() ${propertyKey};\``;
+    }
     Object.defineProperty(target, propertyKey, {
       get() {
         const key = propertyKey.replace(/^\$/, '');

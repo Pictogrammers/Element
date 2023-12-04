@@ -5,6 +5,7 @@
     "lib": ["ES2017", "ES6", "DOM"],
     "declaration": true,
     "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "strictNullChecks": true,
     "strict": true,
     "outDir": "dist",
