@@ -87,7 +87,7 @@ import { Component, Prop, normalizeBoolean } from '@pictogrammers/element';
 get selected() {
   return this.#selected;
 }
-set selected(value) {
+set selected(value: string | boolean) {
   this.#selected = normalizeBoolean(value);
 }
 ```
