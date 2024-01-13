@@ -67,6 +67,36 @@ export default class HelloWorld extends HTMLElement {
 }
 ```
 
+### Normalizing Props
+
+It is recommended to use primitives for props where possible. To make this easier functions are provided to normalize values for booleans, integers, numbers, and strings.
+
+```typescript
+import { Component, Prop, normalizeBoolean } from '@pictogrammers/element';
+// ...
+@Prop(normalizeBoolean) selected = false;
+```
+
+Which is equivalent to...
+
+```typescript
+import { Component, Prop, normalizeBoolean } from '@pictogrammers/element';
+// ...
+#selected = false;
+@Prop()
+get selected() {
+  return this.#selected;
+}
+set selected(value) {
+  this.#selected = normalizeBoolean(value);
+}
+```
+
+- `normalizeInteger` - Wrapper for `parseInt(value, 10)`.
+- `normalizeFloat` - Wrapper for `parseFloat(value)`.
+- `normalizeBoolean` - Handles `bool` type including string `'true'` / `'false'`.
+- `normalizeString` - Wrapper for `` `${value}` ``.
+
 ## Advanced
 
 Starting with a simple component can allow one to extend it with more features later on. This can be done by extending components.

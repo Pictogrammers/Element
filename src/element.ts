@@ -54,15 +54,19 @@ export function Component(config: CustomElementConfig = {}) {
     const disconnectedCallback = cls.prototype.disconnectedCallback || (() => { });
 
     cls.prototype.connectedCallback = function () {
-      if (!this[init] && !config.template) {
+      if (!this[init] && config.template === undefined && config.style === undefined) {
         if (config.useShadow === false) {
           // Base class with no template
         } else {
           this.attachShadow({ mode: 'open' });
         }
-      } else if (!this[init] && config.template) {
+      } else if (!this[init]) {
         const $template = document.createElement('template');
-        $template.innerHTML = `${cls.prototype[template]}<style>${cls.prototype[style]}</style>`;
+        let content = cls.prototype[template] || '';
+        if (cls.prototype[style]) {
+          content += `<style>${cls.prototype[style]}</style>`;
+        }
+        $template.innerHTML = content;
         const $node = document.importNode($template.content, true);
         if (config.useShadow === false) {
           this.appendChild($node);
@@ -139,8 +143,8 @@ export function TransmutePart(part: string, selector: string) {
   };
 }
 
-export function Prop(): any {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function Prop(normalize?: <Type>(value: any) => Type): any {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor | any) {
     const { constructor } = target;
     if (!constructor.observedAttributes) {
       constructor.observedAttributes = [];
@@ -154,21 +158,40 @@ export function Prop(): any {
     constructor.observedAttributes = observedAttributes.concat([normalizedPropertyKey]);
     const symbol = Symbol(propertyKey);
     symbols[propertyKey] = symbol;
-    Object.defineProperty(target, propertyKey, {
-      get() {
-        return this[symbol];
-      },
-      set(value: string) {
-        this[symbol] = value;
+    if (descriptor) {
+      let get = descriptor.get!;
+      descriptor.get = function () {
+          return get.call(this);
+      };
+      let set = descriptor.set!;
+      descriptor.set = function (value: any) {
+        set.call(this, value);
+        this[symbol] = get.call(this);
         if (this[init]) {
           this[parent].map((p: any) => {
             if (p.render) {
-              p.render.call(this, { [propertyKey]: true });
+                p.render.call(this, { [propertyKey]: true });
             }
           });
         }
-      }
-    });
+      };
+    } else {
+      Object.defineProperty(target, propertyKey, {
+        get() {
+          return this[symbol];
+        },
+        set(value: string) {
+          this[symbol] = normalize ? normalize(value) : value;
+          if (this[init]) {
+            this[parent].map((p: any) => {
+              if (p.render) {
+                p.render.call(this, { [propertyKey]: true });
+              }
+            });
+          }
+        }
+      });
+    }
   };
 }
 
@@ -240,6 +263,26 @@ export function node<T>(template: string, init: TemplatePart): T {
     }
   }
   return $node as any;
+}
+
+export function normalizeInt(value: any): number {
+  return parseInt(`${value}`, 10);
+}
+
+export function normalizeFloat(value: any): number {
+  return parseFloat(`${value}`);
+}
+
+export function normalizeBoolean(value: any): boolean {
+  return value === '' || value === true
+    ? true
+    : value === null
+      ? false
+      : value || true;
+}
+
+export function normalizeString(value: any): string {
+  return `${value}`;
 }
 
 // JEST
