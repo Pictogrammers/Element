@@ -143,7 +143,7 @@ export function TransmutePart(part: string, selector: string) {
   };
 }
 
-export function Prop(normalize?: <Type>(value: any) => Type): any {
+export function Prop(normalize?: (value: any) => any): any {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor | any) {
     const { constructor } = target;
     if (!constructor.observedAttributes) {
