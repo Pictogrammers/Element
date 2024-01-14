@@ -166,7 +166,7 @@ export function Prop(normalize?: (value: any) => any): any {
       let set = descriptor.set!;
       descriptor.set = function (value: any) {
         set.call(this, value);
-        this[symbol] = get.call(this);
+        this[symbol] = value;
         if (this[init]) {
           this[parent].map((p: any) => {
             if (p.render) {
