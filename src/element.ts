@@ -103,8 +103,16 @@ export function Component(config: CustomElementConfig = {}) {
           );
         }
       });
-      this[init] = true;
-      connectedCallback.call(this);
+      // Got lazy here, rewrite later
+      if (document.readyState !== 'complete') {
+        window.addEventListener('load', () => {
+          this[init] = true;
+          connectedCallback.call(this);
+        });
+      } else {
+        this[init] = true;
+        connectedCallback.call(this);
+      }
       if (this.componentDidMount) {
         this.componentDidMount();
       }
@@ -143,6 +151,24 @@ export function TransmutePart(part: string, selector: string) {
   };
 }
 
+function isArray(a: any) {
+  return (!!a) && (a.constructor === Array);
+}
+
+function isObject(a: any) {
+  return (!!a) && (a.constructor === Object);
+}
+
+function render(self: any, propertyKey: string) {
+  if (self[init]) {
+    self[parent].map((p: any) => {
+      if (p.render) {
+        p.render.call(self, { [propertyKey]: true });
+      }
+    });
+  }
+}
+
 export function Prop(normalize?: (value: any) => any): any {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor | any) {
     const { constructor } = target;
@@ -161,33 +187,57 @@ export function Prop(normalize?: (value: any) => any): any {
     if (descriptor) {
       let get = descriptor.get!;
       descriptor.get = function () {
-          return get.call(this);
+        return get.call(this);
       };
       let set = descriptor.set!;
       descriptor.set = function (value: any) {
         set.call(this, value);
         this[symbol] = value;
-        if (this[init]) {
-          this[parent].map((p: any) => {
-            if (p.render) {
-                p.render.call(this, { [propertyKey]: true });
-            }
-          });
-        }
+        render(this, propertyKey);
       };
     } else {
       Object.defineProperty(target, propertyKey, {
         get() {
           return this[symbol];
         },
-        set(value: string) {
-          this[symbol] = normalize ? normalize(value) : value;
-          if (this[init]) {
-            this[parent].map((p: any) => {
-              if (p.render) {
-                p.render.call(this, { [propertyKey]: true });
-              }
+        set(value) {
+          if (isArray(value)) {
+            if (value !== undefined && !isArray(value)) {
+              throw new Error(`Anti-pattern (${propertyKey}): Do not reassign array type.`)
+            }
+            if (!this[symbol] || !this[symbol][symbol]) {
+              const self = this;
+              this[symbol] = new Proxy(value, {
+                get: function (target, prop) {
+                  if (typeof target[prop] === 'function') {
+                    return (...args: any) => {
+                      const result = target[prop](...args);
+                      render(self, propertyKey);
+                      return result;
+                    };
+                  }
+                  return Reflect.get(target, prop);
+                },
+                set: function (target, prop, value) {
+                  const x = Reflect.set(target, prop, value);
+                  if (!self[symbol][symbol].ignore) {
+                    render(self, propertyKey);
+                  }
+                  return x;
+                }
+              });
+              this[symbol][symbol] = { ignore: true };
+            }
+            this[symbol][symbol].ignore = true;
+            Reflect.set(this[symbol], 'length', 0);
+            value.forEach((v: any, i: number) => {
+              Reflect.set(this[symbol], `${i}`, v);
             });
+            render(this, propertyKey);
+            this[symbol][symbol].ignore = false;
+          } else {
+            this[symbol] = normalize ? normalize(value) : value;
+            render(this, propertyKey);
           }
         }
       });
@@ -197,7 +247,7 @@ export function Prop(normalize?: (value: any) => any): any {
 
 export function Part(): any {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    if(descriptor) {
+    if (descriptor) {
       throw `Invalid, value must be undefined \`@Part() ${propertyKey};\``;
     }
     Object.defineProperty(target, propertyKey, {
