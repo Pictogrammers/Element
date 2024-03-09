@@ -169,6 +169,8 @@ function render(self: any, propertyKey: string) {
   }
 }
 
+const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice'];
+
 export function Prop(normalize?: (value: any) => any): any {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor | any) {
     const { constructor } = target;
@@ -208,8 +210,8 @@ export function Prop(normalize?: (value: any) => any): any {
             if (!this[symbol] || !this[symbol][symbol]) {
               const self = this;
               this[symbol] = new Proxy(value, {
-                get: function (target, prop) {
-                  if (typeof target[prop] === 'function') {
+                get: function (target, prop: any) {
+                  if (arrayRender.includes(prop) && typeof target[prop] === 'function') {
                     return (...args: any) => {
                       const result = target[prop](...args);
                       render(self, propertyKey);
