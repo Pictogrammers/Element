@@ -62,7 +62,7 @@ export default class HelloWorld extends HTMLElement {
 :host {
   display: block;
 }
-[part~=message] {
+[part=message] {
   /* Style Part */
 }
 ```
@@ -150,7 +150,7 @@ export default class HelloWorldButton extends HelloWorld {
 ### CSS Styles (`worldButton.css`)
 
 ```css
-[part~=button] {
+[part=button] {
   border-radius: 0.25rem;
   border: #ddd;
   color: #222;
@@ -180,7 +180,7 @@ npm link
 npm link @pictogrammers/element
 ```
 
-## Other
+## Utility Base Class
 
 Some other notes about unique use cases that are handled.
 
@@ -203,8 +203,47 @@ export default class HelloOverlay extends HtmlElement {
 }
 ```
 
-### Jest Utils
+## Jest Utils
 
 - `selectComponent<T>(tag: string): T`
 - `selectPart<T>(component: HTMLElement, name: string): T`
 - `getProps(tag: string): string[]`
+
+### Basic
+
+```typescript
+import { selectComponent, getProps } from '@pictogrammers/element';
+
+import './world';
+import HelloWorld from './world';
+
+const HELLO_WORLD = 'hello-world';
+
+describe('hello-world', () => {
+
+  const DEFAULT_MESSAGE = 'None';
+
+  beforeEach(() => {
+    var c = document.createElement(HELLO_WORLD);
+    document.body.appendChild(c);
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  it('should be registered', () => {
+    expect(customElements.get(HELLO_WORLD)).toBeDefined();
+  });
+
+  it('should only expose known props', () => {
+    const props = getProps(HELLO_WORLD);
+    expect(props.length).toBe(2);
+    expect(props).toContain('message');
+    expect(props).toContain('count');
+  });
+
+});
+```
