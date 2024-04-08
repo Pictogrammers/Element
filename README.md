@@ -97,6 +97,36 @@ set selected(value: string | boolean) {
 - `normalizeBoolean` - Handles `bool` type including string `'true'` / `'false'`.
 - `normalizeString` - Wrapper for `` `${value}` ``.
 
+### Template Loops
+
+Components can create repeated lists of other components by using the `forEach` utility. A unique `key` property is required in each item of the items array. Any updates will sync values to list of components.
+
+```typescript
+import { forEach } from '@pictogrammers/element';
+
+import UiItem from 'ui/item';
+
+// ... in element class
+
+  render(changes) {
+    if (changes.options) {
+      forEach({
+        container: this.$items,
+        items: this.options,
+        type: (item) => {
+          return UiItem;
+        },
+        create: ($item, item) => {
+          // after creation of $item element
+        },
+        update: ($item, item) => {
+          // after every $item update
+        },
+      });
+    }
+  }
+```
+
 ## Advanced
 
 Starting with a simple component can allow one to extend it with more features later on. This can be done by extending components.

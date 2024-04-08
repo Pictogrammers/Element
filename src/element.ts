@@ -86,9 +86,31 @@ export function Component(config: CustomElementConfig = {}) {
         throw new Error('You need to pass a template for an extended element.');
       }
 
-      if (this.componentWillMount) {
-        this.componentWillMount();
+      const tags = new Set<string>();
+      [...this.shadowRoot.querySelectorAll('*')].forEach(ele => {
+        if (ele.localName.indexOf('-') !== -1) {
+          tags.add(ele.localName);
+        }
+      });
+      const promises = Array.from(tags.values()).map(tag => {
+        return customElements.get(tag)
+          ? Promise.resolve()
+          : customElements.whenDefined(tag);
+      });
+      if (promises.length === 0) {
+        this[init] = true;
+        connectedCallback.call(this);
+      } else {
+        Promise.all(promises).then(() => {
+          this[init] = true;
+          connectedCallback.call(this);
+          // makes working with slots much easier on connectedCallback
+          [...this.shadowRoot.querySelectorAll('slot')].forEach(slot => {
+            slot.dispatchEvent(new CustomEvent('slotchange'));
+          });
+        });
       }
+
       this[parent].map((p: any) => {
         if (p.render) {
           p.render.call(
@@ -103,29 +125,10 @@ export function Component(config: CustomElementConfig = {}) {
           );
         }
       });
-      // Got lazy here, rewrite later
-      if (document.readyState !== 'complete') {
-        window.addEventListener('load', () => {
-          this[init] = true;
-          connectedCallback.call(this);
-        });
-      } else {
-        this[init] = true;
-        connectedCallback.call(this);
-      }
-      if (this.componentDidMount) {
-        this.componentDidMount();
-      }
     };
 
     cls.prototype.disconnectedCallback = function () {
-      if (this.componentWillUnmount) {
-        this.componentWillUnmount();
-      }
       disconnectedCallback.call(this);
-      if (this.componentDidUnmount) {
-        this.componentDidUnmount();
-      }
     };
 
     cls.prototype.attributeChangedCallback = function (name: string, oldValue: string | null, newValue: string | null) {
@@ -335,6 +338,48 @@ export function normalizeBoolean(value: any): boolean {
 
 export function normalizeString(value: any): string {
   return `${value}`;
+}
+
+
+type ForEach = {
+  container: HTMLElement;
+  items: any[];
+  type: (item: any) => any;
+  create?: ($item: HTMLElement, item: any) => void;
+  update?: ($item: HTMLElement, item: any) => void;
+}
+
+export function forEach({ container, items, type, create, update }: ForEach) {
+  const existing = new Map();
+  Array.from(container.children).map(($item: any) => {
+    existing.set($item.dataset.key, $item);
+  });
+  // Delete elements no longer in list
+  const latest = items.map(x => x.key);
+  const deleteItems = Array.from(existing.keys()).filter(x => !latest.includes(x));
+  deleteItems.forEach(x => existing.get(x).remove());
+  let previous: any = null;
+  // Update or Insert elements
+  items.forEach((option, i) => {
+    const { key, ...options } = option;
+    if (existing.has(key)) {
+      Object.assign(existing.get(key), options);
+      update && update(existing.get(key), options);
+    } else {
+      option.type = type(options);
+      const $new = document.createElement(camelToDash(option.type.name), option.type);
+      $new.dataset.key = option.key;
+      Object.assign($new, options);
+      create && create($new, options);
+      if (previous) {
+        existing.get(previous).after($new);
+      } else {
+        container.prepend($new);
+      }
+      existing.set(option.key, $new);
+    }
+    previous = option.key;
+  });
 }
 
 // JEST
