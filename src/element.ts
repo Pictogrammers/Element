@@ -87,15 +87,14 @@ export function Component(config: CustomElementConfig = {}) {
       }
 
       const tags = new Set<string>();
-      [...this.shadowRoot.querySelectorAll('*')].forEach(ele => {
+      for (const ele of this.shadowRoot.querySelectorAll('*')) {
         if (ele.localName.indexOf('-') !== -1) {
           tags.add(ele.localName);
         }
-      });
+      }
       const promises = Array.from(tags.values()).map(tag => {
-        return customElements.get(tag)
-          ? Promise.resolve()
-          : customElements.whenDefined(tag);
+        if (customElements.get(tag)) { return Promise.resolve(); }
+        return customElements.whenDefined(tag);
       });
       if (promises.length === 0) {
         this[init] = true;
@@ -104,10 +103,10 @@ export function Component(config: CustomElementConfig = {}) {
         Promise.all(promises).then(() => {
           this[init] = true;
           connectedCallback.call(this);
-          // makes working with slots much easier on connectedCallback
-          [...this.shadowRoot.querySelectorAll('slot')].forEach(slot => {
+          // dispatch slotchange
+          for (const slot of this.shadowRoot.querySelectorAll('slot')) {
             slot.dispatchEvent(new CustomEvent('slotchange'));
-          });
+          }
         });
       }
 
