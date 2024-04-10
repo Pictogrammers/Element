@@ -93,8 +93,9 @@ export function Component(config: CustomElementConfig = {}) {
         }
       }
       const promises = Array.from(tags.values()).map(tag => {
-        if (customElements.get(tag)) { return Promise.resolve(); }
-        return customElements.whenDefined(tag);
+        return customElements.get(tag)
+          ? Promise.resolve()
+          : customElements.whenDefined(tag);
       });
       if (promises.length === 0) {
         this[init] = true;
@@ -383,8 +384,22 @@ export function forEach({ container, items, type, create, update }: ForEach) {
 
 // JEST
 
-export function selectComponent<T>(tag: string): T {
-  return document.querySelector(tag) as any;
+export async function selectComponent<T>(tagName: string): Promise<T> {
+  const component = document.querySelector(tagName) as any;
+  const tags = new Set<string>();
+  for (const ele of component.shadowRoot.querySelectorAll('*')) {
+    if (ele.localName.indexOf('-') !== -1) {
+      tags.add(ele.localName);
+    }
+  }
+  for (var it = tags.values(), tag = null; tag = it.next().value;) {
+    if (!customElements.get(tag)) {
+      const namespace = tag.match(/^([^-]+)/)[1];
+      const componentName = dashToCamel(tag.match(/^[^-]+-(.+)/)[1]);
+      throw new Error(`Missing \`import '../${componentName}/${componentName}';\` in spec.ts file.`);
+    }
+  }
+  return component;
 }
 
 export function selectPart<T>(component: HTMLElement, name: string): T {
