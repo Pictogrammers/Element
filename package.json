@@ -1,6 +1,6 @@
 {
   "name": "@pictogrammers/element",
-  "version": "0.0.38",
+  "version": "0.0.40",
   "description": "Web Component Element for TypeScript",
   "module": "./dist/element.esm.js",
   "main": "./dist/element.common.js",

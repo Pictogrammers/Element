@@ -331,7 +331,7 @@ export function normalizeFloat(value: any): number {
 export function normalizeBoolean(value: any): boolean {
   return value === '' || value === true
     ? true
-    : value === null
+    : value === null || value === false
       ? false
       : value || true;
 }
@@ -384,7 +384,7 @@ export function forEach({ container, items, type, create, update }: ForEach) {
 
 // JEST
 
-export async function selectComponent<T>(tagName: string): Promise<T> {
+export function selectComponent<T>(tagName: string): T {
   const component = document.querySelector(tagName) as any;
   const tags = new Set<string>();
   for (const ele of component.shadowRoot.querySelectorAll('*')) {
