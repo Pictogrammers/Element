@@ -10,6 +10,19 @@ interface Constructor {
   observedAttributes: string[]
 }
 
+class PropError extends Error {
+  constructor(message: string, ignore: any) {
+    super(message);
+    this.name = 'PropError';
+
+    // @ts-ignore
+    if (Error.captureStackTrace) {
+      // @ts-ignore
+      Error.captureStackTrace(this, ignore);
+    }
+  }
+}
+
 const init = Symbol('init');
 const template = Symbol('template');
 const style = Symbol('style');
@@ -172,7 +185,7 @@ function render(self: any, propertyKey: string) {
   }
 }
 
-const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice'];
+const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'with'];
 
 export function Prop(normalize?: (value: any) => any): any {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor | any) {
@@ -208,13 +221,20 @@ export function Prop(normalize?: (value: any) => any): any {
         set(value) {
           if (isArray(value)) {
             if (value !== undefined && !isArray(value)) {
-              throw new Error(`Anti-pattern (${propertyKey}): Do not reassign array type.`)
+              throw new PropError(
+                `Array "${propertyKey}" (Prop) initialized already. Reassignments must be array type.`,
+                Object.getOwnPropertyDescriptor(target, propertyKey)?.set
+              );
             }
             if (!this[symbol] || !this[symbol][symbol]) {
               const self = this;
               this[symbol] = new Proxy(value, {
                 get: function (target, prop: any) {
-                  if (arrayRender.includes(prop) && typeof target[prop] === 'function') {
+                  if (
+                    arrayRender.includes(prop)
+                    && typeof target[prop] === 'function'
+                    && !self[symbol][symbol].init
+                  ) {
                     return (...args: any) => {
                       const result = target[prop](...args);
                       render(self, propertyKey);
@@ -225,7 +245,10 @@ export function Prop(normalize?: (value: any) => any): any {
                 },
                 set: function (target, prop, value) {
                   const x = Reflect.set(target, prop, value);
-                  if (!self[symbol][symbol].ignore) {
+                  if (
+                    !self[symbol][symbol].ignore
+                    && !(prop === 'length' && self[symbol].length === value)
+                  ) {
                     render(self, propertyKey);
                   }
                   return x;
@@ -233,13 +256,14 @@ export function Prop(normalize?: (value: any) => any): any {
               });
               this[symbol][symbol] = { ignore: true };
             }
-            this[symbol][symbol].ignore = true;
-            Reflect.set(this[symbol], 'length', 0);
-            value.forEach((v: any, i: number) => {
-              Reflect.set(this[symbol], `${i}`, v);
-            });
-            render(this, propertyKey);
-            this[symbol][symbol].ignore = false;
+            if (!this[symbol][symbol].init) {
+              this[symbol][symbol].init = true;
+            } else {
+              this[symbol][symbol].ignore = true;
+              this[symbol].splice(0, this[symbol].length, ...value);
+              this[symbol][symbol].ignore = false;
+              render(this, propertyKey);
+            }
           } else {
             this[symbol] = normalize ? normalize(value) : value;
             render(this, propertyKey);
@@ -340,6 +364,9 @@ export function normalizeString(value: any): string {
   return `${value}`;
 }
 
+export type Changes = {
+  [key: string]: boolean
+}
 
 type ForEach = {
   container: HTMLElement;
@@ -394,8 +421,16 @@ export function selectComponent<T>(tagName: string): T {
   }
   for (var it = tags.values(), tag = null; tag = it.next().value;) {
     if (!customElements.get(tag)) {
-      const namespace = tag.match(/^([^-]+)/)[1];
-      const componentName = dashToCamel(tag.match(/^[^-]+-(.+)/)[1]);
+      const namespaceMatch = tag.match(/^([^-]+)/);
+      if (namespaceMatch === null || namespaceMatch.length > 1) {
+        throw new Error('Failed to parse namespace.');
+      }
+      const namespace = namespaceMatch[1];
+      const componentMatch = tag.match(/^[^-]+-(.+)/);
+      if (componentMatch === null || componentMatch.length > 1) {
+        throw new Error('Failed to parse component name.');
+      }
+      const componentName = dashToCamel(componentMatch[1]);
       throw new Error(`Missing \`import '../${componentName}/${componentName}';\` in spec.ts file.`);
     }
   }
