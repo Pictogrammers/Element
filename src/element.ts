@@ -138,6 +138,13 @@ export function Component(config: CustomElementConfig = {}) {
           );
         }
       });
+      // Stop ignoring property updates!
+      cls.observedAttributes && cls.observedAttributes.forEach((attr: string) => {
+        const symbol = cls.symbols[attr];
+        if (isArray(this[symbol])) {
+          this[symbol][symbol].ignore = false;
+        }
+      });
     };
 
     cls.prototype.disconnectedCallback = function () {
@@ -233,22 +240,26 @@ export function Prop(normalize?: (value: any) => any): any {
                   if (
                     arrayRender.includes(prop)
                     && typeof target[prop] === 'function'
-                    && !self[symbol][symbol].init
+                    && !target[symbol].ignore
                   ) {
                     return (...args: any) => {
                       const result = target[prop](...args);
-                      render(self, propertyKey);
+                      target[host].forEach((h: any) => {
+                        renderForEach(target);
+                        render(h, propertyKey);
+                      });
                       return result;
                     };
                   }
                   return Reflect.get(target, prop);
                 },
-                set: function (target, prop, value) {
-                  const x = Reflect.set(target, prop, value);
+                set: function (target, prop, v) {
+                  const x = Reflect.set(target, prop, v);
                   if (
                     !self[symbol][symbol].ignore
-                    && !(prop === 'length' && self[symbol].length === value)
+                    && !(prop === 'length' && self[symbol].length === v)
                   ) {
+                    bindForEach(value);
                     render(self, propertyKey);
                   }
                   return x;
@@ -256,13 +267,37 @@ export function Prop(normalize?: (value: any) => any): any {
               });
               this[symbol][symbol] = { ignore: true };
             }
+            bindForEach(value);
             if (!this[symbol][symbol].init) {
               this[symbol][symbol].init = true;
-            } else {
+            } else if (!this[symbol][symbol].ignore) {
               this[symbol][symbol].ignore = true;
-              this[symbol].splice(0, this[symbol].length, ...value);
+              if (this[symbol] === value) {
+                throw new Error('Setting an array to itself is not allowed.');
+              } else {
+                // Process binded array...
+                if (value[bind]) {
+                  this[symbol][host].forEach((x: any) => {
+                      value[host].forEach((y: any) => {
+                          x[symbol][bind].forEach((item: any) => {
+                              y[symbol][bind].add(item);
+                          });
+                          x[symbol][host].forEach((item: any) => {
+                              y[symbol][host].add(item);
+                          });
+                          // override the underlying symbols instead!!!!
+                          x[symbol] = y[symbol];
+                      });
+                  });
+                } else {
+                    // Keep symbol reference, replace data
+                    this[symbol].splice(0, this[symbol].length, ...value);
+                    this[symbol][host].forEach((h: any) => {
+                        render(h, propertyKey);
+                    });
+                }
+              }
               this[symbol][symbol].ignore = false;
-              render(this, propertyKey);
             }
           } else {
             this[symbol] = normalize ? normalize(value) : value;
@@ -368,6 +403,12 @@ export type Changes = {
   [key: string]: boolean
 }
 
+const trackProxy = Symbol('hasProxy');
+function hasProxy(obj: object) {
+  if (obj === null || typeof obj != "object") return false;
+  return trackProxy in obj;
+}
+
 type ForEach = {
   container: HTMLElement;
   items: any[];
@@ -376,36 +417,90 @@ type ForEach = {
   update?: ($item: HTMLElement, item: any) => void;
 }
 
+const meta = Symbol('meta');
+const host = Symbol('host');
+const bind = Symbol('bind');
+
 export function forEach({ container, items, type, create, update }: ForEach) {
-  const existing = new Map();
-  Array.from(container.children).map(($item: any) => {
-    existing.set($item.dataset.key, $item);
-  });
-  // Delete elements no longer in list
-  const latest = items.map(x => x.key);
-  const deleteItems = Array.from(existing.keys()).filter(x => !latest.includes(x));
-  deleteItems.forEach(x => existing.get(x).remove());
-  let previous: any = null;
-  // Update or Insert elements
-  items.forEach((option, i) => {
-    const { key, ...options } = option;
-    if (existing.has(key)) {
-      Object.assign(existing.get(key), options);
-      update && update(existing.get(key), options);
-    } else {
-      option.type = type(options);
-      const $new = document.createElement(camelToDash(option.type.name), option.type);
-      $new.dataset.key = option.key;
-      Object.assign($new, options);
-      create && create($new, options);
-      if (previous) {
-        existing.get(previous).after($new);
+  const { host: hostEle } = container.getRootNode() as any as { host: HTMLElement };
+  // @ts-ignore
+  items[meta] ??= new Map();
+  // @ts-ignore
+  items[meta].set(container, { host: hostEle, container, type, create, update })
+  // @ts-ignore
+  items[bind] ??= new Set();
+  // @ts-ignore
+  items[bind].add(container);
+  // @ts-ignore
+  items[host] ??= new Set();
+  // @ts-ignore
+  items[host].add(hostEle);
+}
+
+function renderForEach(items: any[]) {
+  // @ts-ignore
+  items[bind].forEach((c) => {
+    // @ts-ignore
+    const { type, update, create } = items[meta].get(c);
+    const existing = new Map();
+    Array.from(c.children).map(($item: any) => {
+      existing.set($item.dataset.key, $item);
+    });
+    // Delete elements no longer in list
+    const latest = items.map(x => `${x.key}`);
+    const deleteItems = Array.from(existing.keys()).filter(x => !latest.includes(x));
+    deleteItems.forEach(x => existing.get(x).remove());
+    let previous: any = null;
+    // Update or Insert elements
+    items.forEach((option, i) => {
+      const { key, ...options } = option;
+      if (existing.has(`${key}`)) {
+        // delete this?
+        update && update(existing.get(`${key}`), options);
       } else {
-        container.prepend($new);
+        if (!option[bind]) { option[bind] = new Set(); }
+        option.type = type(options);
+        const { observedAttributes } = option.type;
+        const $new = document.createElement(camelToDash(option.type.name), option.type);
+        option[bind].add($new);
+        $new.dataset.key = `${option.key}`;
+        if (!options.hasOwnProperty('index')) {
+          option.index = i;
+        }
+        observedAttributes.forEach((attr: string) => {
+          if (options.hasOwnProperty(attr)) {
+            //@ts-ignore
+            $new[attr] = option[attr];
+          }
+        });
+        create && create($new, options);
+        if (previous) {
+          existing.get(previous).after($new);
+        } else {
+          c.prepend($new);
+        }
+        existing.set(`${option.key}`, $new);
       }
-      existing.set(option.key, $new);
+      previous = `${option.key}`;
+    });
+  });
+}
+
+function bindForEach(value: any[]) {
+  value.forEach((v, i) => {
+    if (!hasProxy(v)) {
+      value.splice(i, 1, new Proxy(v, {
+        set: function (target, prop, val) {
+          const binded = value[i][bind];
+          binded && (binded.forEach((e: any) => e[prop] = val));
+          return Reflect.set(target, prop, val);
+        },
+        has(o, prop) {
+          if (prop == trackProxy) return true;
+          return prop in o;
+        }
+      }));
     }
-    previous = option.key;
   });
 }
 
