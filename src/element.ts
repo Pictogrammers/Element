@@ -507,13 +507,35 @@ function renderForEach(items: ArrayWithMetaAndBind) {
   });
 }
 
+// todo: looping all items is lazy
 function bindForEach(value: any[]) {
-  value.forEach((v, i) => {
+  value.forEach(function(v, i) {
     if (!hasProxy(v)) {
+      const symbol = Symbol(`${v.key}`);
+      const symbolMeta = Symbol(`${v.key}:meta`);
+      // @ts-ignore
+      value[symbol] = v;
+      // @ts-ignore
+      value[symbolMeta] = new Map<HTMLElement, any>();
       value.splice(i, 1, new Proxy(v, {
+        get: function (target, prop) {
+          if (prop === meta) {
+            // @ts-ignore
+            return value[symbolMeta];
+          }
+          // @ts-ignore
+          return value[symbol][prop];
+        },
         set: function (target, prop, val) {
-          const binded = value[i][bind];
-          binded && (binded.forEach((e: any) => e[prop] = val));
+          if (prop === meta) {
+            // @ts-ignore
+            value[symbolMeta] = val;
+          }
+          // @ts-ignore
+          value[symbol][prop] = val;
+          // @ts-ignore
+          const binded = value[symbolMeta];
+          binded && (binded.forEach((v: any, ele: any) => ele[prop] = val));
           return Reflect.set(target, prop, val);
         },
         has(o, prop) {
