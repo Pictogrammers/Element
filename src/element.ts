@@ -143,6 +143,7 @@ export function Component(config: CustomElementConfig = {}) {
         const symbol = cls.symbols[attr];
         if (isArray(this[symbol])) {
           this[symbol][symbol].ignore = false;
+          console.log('force render arrays?', this[symbol]);
         }
       });
     };
@@ -208,6 +209,7 @@ export function Prop(normalize?: (value: any) => any): any {
     const normalizedPropertyKey = camelToDash(propertyKey);
     constructor.observedAttributes = observedAttributes.concat([normalizedPropertyKey]);
     const symbol = Symbol(propertyKey);
+    const symbolMeta = Symbol(`${propertyKey}:meta`);
     symbols[propertyKey] = symbol;
     if (descriptor) {
       let get = descriptor.get!;
@@ -234,9 +236,13 @@ export function Prop(normalize?: (value: any) => any): any {
               );
             }
             if (!this[symbol] || !this[symbol][symbol]) {
+              // todo: update function below to () => {}
               const self = this;
               this[symbol] = new Proxy(value, {
                 get: function (target, prop: any) {
+                  if (prop === meta) {
+                    return self[symbolMeta];
+                  }
                   if (
                     arrayRender.includes(prop)
                     && typeof target[prop] === 'function'
@@ -244,8 +250,8 @@ export function Prop(normalize?: (value: any) => any): any {
                   ) {
                     return (...args: any) => {
                       const result = target[prop](...args);
+                      renderForEach(self[symbol]);
                       target[host].forEach((h: any) => {
-                        renderForEach(target);
                         render(h, propertyKey);
                       });
                       return result;
@@ -254,7 +260,12 @@ export function Prop(normalize?: (value: any) => any): any {
                   return Reflect.get(target, prop);
                 },
                 set: function (target, prop, v) {
+                  if (prop === meta) {
+                    self[symbolMeta] = v;
+                    return true;
+                  }
                   const x = Reflect.set(target, prop, v);
+                  console.log(propertyKey, self[symbol][symbol].ignore);
                   if (
                     !self[symbol][symbol].ignore
                     && !(prop === 'length' && self[symbol].length === v)
@@ -277,6 +288,11 @@ export function Prop(normalize?: (value: any) => any): any {
               } else {
                 // Process binded array...
                 if (value[bind]) {
+                  this[symbolMeta].forEach((item: any, key: any) => {
+                    value[meta].forEach(() => {
+                      value[meta].set(key, item);
+                    });
+                  });
                   this[symbol][host].forEach((x: any) => {
                       value[host].forEach((y: any) => {
                           x[symbol][bind].forEach((item: any) => {
@@ -409,39 +425,44 @@ function hasProxy(obj: object) {
   return trackProxy in obj;
 }
 
+const meta = Symbol('meta');
+const host = Symbol('host');
+const bind = Symbol('bind');
+
+interface ArrayWithMetaAndBind extends Array<any> {
+  [key: number]: any;
+  [meta]: Map<HTMLElement, any>;
+  [bind]: Set<HTMLElement>;
+}
+
 type ForEach = {
   container: HTMLElement;
-  items: any[];
+  items: ArrayWithMetaAndBind;
   type: (item: any) => any;
   create?: ($item: HTMLElement, item: any) => void;
   update?: ($item: HTMLElement, item: any) => void;
 }
 
-const meta = Symbol('meta');
-const host = Symbol('host');
-const bind = Symbol('bind');
-
 export function forEach({ container, items, type, create, update }: ForEach) {
   const { host: hostEle } = container.getRootNode() as any as { host: HTMLElement };
-  // @ts-ignore
-  items[meta] ??= new Map();
-  // @ts-ignore
-  items[meta].set(container, { host: hostEle, container, type, create, update })
-  // @ts-ignore
+  items[meta] ??= new Map<HTMLElement, any>();
+  items[meta].set(container, { host: hostEle, type, create, update });
   items[bind] ??= new Set();
-  // @ts-ignore
   items[bind].add(container);
   // @ts-ignore
   items[host] ??= new Set();
   // @ts-ignore
   items[host].add(hostEle);
+  // already attached, so init
+  if (items.length) {
+    renderForEach(items);
+  }
 }
 
-function renderForEach(items: any[]) {
-  // @ts-ignore
-  items[bind].forEach((c) => {
+function renderForEach(items: ArrayWithMetaAndBind) {
+  items[meta].forEach((value: any, c: HTMLElement) => {
     // @ts-ignore
-    const { type, update, create } = items[meta].get(c);
+    const { type, update, create } = value;
     const existing = new Map();
     Array.from(c.children).map(($item: any) => {
       existing.set($item.dataset.key, $item);
