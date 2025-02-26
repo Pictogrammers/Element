@@ -252,8 +252,8 @@ export function Prop(normalize?: (value: any) => any): any {
                       const result = target[prop](...args);
                       bindForEach(target);
                       renderForEach(self[symbol]);
-                      target[host].forEach((h: any) => {
-                        render(h, propertyKey);
+                      self[symbolMeta].forEach(({ host }: any) => {
+                        render(host, propertyKey);
                       });
                       return result;
                     };
@@ -288,29 +288,24 @@ export function Prop(normalize?: (value: any) => any): any {
                 throw new Error('Setting an array to itself is not allowed.');
               } else {
                 // Process binded array...
-                if (value[bind]) {
+                if (value[meta]) {
+                  // Mirror underlying values
+                  this[symbolMeta].forEach(({ host: x }: any) => {
+                    value[meta].forEach(({ host: y }: any) => {
+                      x[symbol] = y[symbol];
+                    });
+                  });
+                  // Merge meta data
                   this[symbolMeta].forEach((item: any, key: any) => {
                     value[meta].forEach(() => {
                       value[meta].set(key, item);
                     });
                   });
-                  this[symbol][host].forEach((x: any) => {
-                      value[host].forEach((y: any) => {
-                          x[symbol][bind].forEach((item: any) => {
-                              y[symbol][bind].add(item);
-                          });
-                          x[symbol][host].forEach((item: any) => {
-                              y[symbol][host].add(item);
-                          });
-                          // override the underlying symbols instead!!!!
-                          x[symbol] = y[symbol];
-                      });
-                  });
                 } else {
                     // Keep symbol reference, replace data
                     this[symbol].splice(0, this[symbol].length, ...value);
-                    this[symbol][host].forEach((h: any) => {
-                        render(h, propertyKey);
+                    this[symbolMeta].forEach(({ host }: any) => {
+                        render(host, propertyKey);
                     });
                 }
               }
@@ -427,7 +422,6 @@ function hasProxy(obj: object) {
 }
 
 const meta = Symbol('meta');
-const host = Symbol('host');
 const bind = Symbol('bind');
 
 interface ArrayWithMetaAndBind extends Array<any> {
@@ -445,15 +439,11 @@ type ForEach = {
 }
 
 export function forEach({ container, items, type, create, update }: ForEach) {
-  const { host: hostEle } = container.getRootNode() as any as { host: HTMLElement };
+  const { host } = container.getRootNode() as any as { host: HTMLElement };
   items[meta] ??= new Map<HTMLElement, any>();
-  items[meta].set(container, { host: hostEle, type, create, update });
+  items[meta].set(container, { host, type, create, update });
   items[bind] ??= new Set();
   items[bind].add(container);
-  // @ts-ignore
-  items[host] ??= new Set();
-  // @ts-ignore
-  items[host].add(hostEle);
   // already attached, so init
   if (items.length) {
     renderForEach(items);
