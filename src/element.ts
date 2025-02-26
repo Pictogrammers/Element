@@ -427,7 +427,6 @@ const bind = Symbol('bind');
 interface ArrayWithMetaAndBind extends Array<any> {
   [key: number]: any;
   [meta]: Map<HTMLElement, any>;
-  [bind]: Set<HTMLElement>;
 }
 
 type ForEach = {
@@ -442,8 +441,6 @@ export function forEach({ container, items, type, create, update }: ForEach) {
   const { host } = container.getRootNode() as any as { host: HTMLElement };
   items[meta] ??= new Map<HTMLElement, any>();
   items[meta].set(container, { host, type, create, update });
-  items[bind] ??= new Set();
-  items[bind].add(container);
   // already attached, so init
   if (items.length) {
     renderForEach(items);
