@@ -250,6 +250,7 @@ export function Prop(normalize?: (value: any) => any): any {
                   ) {
                     return (...args: any) => {
                       const result = target[prop](...args);
+                      bindForEach(target);
                       renderForEach(self[symbol]);
                       target[host].forEach((h: any) => {
                         render(h, propertyKey);
@@ -479,11 +480,10 @@ function renderForEach(items: ArrayWithMetaAndBind) {
         // delete this?
         update && update(existing.get(`${key}`), options);
       } else {
-        if (!option[bind]) { option[bind] = new Set(); }
         option.type = type(options);
         const { observedAttributes } = option.type;
         const $new = document.createElement(camelToDash(option.type.name), option.type);
-        option[bind].add($new);
+        option[meta].set($new, {});
         $new.dataset.key = `${option.key}`;
         if (!options.hasOwnProperty('index')) {
           option.index = i;
