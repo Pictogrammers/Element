@@ -99,7 +99,7 @@ set selected(value: string | boolean) {
 
 ### Template Loops
 
-Components can create repeated lists of other components by using the `forEach` utility. A unique `key` property is required in each item of the items array. Any updates will sync values to list of components.
+Components can create repeated lists of other components by using the `forEach` utility. A unique `key` property is required in each item of the items array (defaults to a uuid if not provided). Any updates will sync values to the component provided in the type function.
 
 ```typescript
 import { forEach } from '@pictogrammers/element';
@@ -108,22 +108,20 @@ import UiItem from 'ui/item';
 
 // ... in element class
 
-  render(changes) {
-    if (changes.options) {
-      forEach({
-        container: this.$items,
-        items: this.options,
-        type: (item) => {
-          return UiItem;
-        },
-        create: ($item, item) => {
-          // after creation of $item element
-        },
-        update: ($item, item) => {
-          // after every $item update
-        },
-      });
-    }
+  connectedCallback() {
+    forEach({
+      container: this.$items,
+      items: this.options,
+      type: (item) => {
+        return UiItem;
+      },
+      create: ($item, item) => {
+        // after creation of $item element
+      },
+      update: ($item, item) => {
+        // after every $item update
+      },
+    });
   }
 ```
 
