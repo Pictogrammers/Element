@@ -28,6 +28,13 @@ const template = Symbol('template');
 const style = Symbol('style');
 const parent = Symbol('parent');
 
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 function extendTemplate(base: string, append: string | null) {
   if (append && append.match(/<parent\/>/)) {
     return append.replace(/<parent\/>/, base);
@@ -138,14 +145,6 @@ export function Component(config: CustomElementConfig = {}) {
           );
         }
       });
-      // Stop ignoring property updates!
-      cls.observedAttributes && cls.observedAttributes.forEach((attr: string) => {
-        const symbol = cls.symbols[attr];
-        if (isArray(this[symbol])) {
-          this[symbol][symbol].ignore = false;
-          console.log('force render arrays?', this[symbol]);
-        }
-      });
     };
 
     cls.prototype.disconnectedCallback = function () {
@@ -235,7 +234,7 @@ export function Prop(normalize?: (value: any) => any): any {
                 Object.getOwnPropertyDescriptor(target, propertyKey)?.set
               );
             }
-            if (!this[symbol] || !this[symbol][symbol]) {
+            if (!this[symbol]) {
               // todo: update function below to () => {}
               const self = this;
               this[symbol] = new Proxy(value, {
@@ -244,9 +243,9 @@ export function Prop(normalize?: (value: any) => any): any {
                     return self[symbolMeta];
                   }
                   if (
-                    arrayRender.includes(prop)
+                    self[symbolMeta]
+                    && arrayRender.includes(prop)
                     && typeof target[prop] === 'function'
-                    && !target[symbol].ignore
                   ) {
                     return (...args: any) => {
                       const result = target[prop](...args);
@@ -266,10 +265,8 @@ export function Prop(normalize?: (value: any) => any): any {
                     return true;
                   }
                   const x = Reflect.set(target, prop, v);
-                  console.log(propertyKey, self[symbol][symbol].ignore);
                   if (
-                    !self[symbol][symbol].ignore
-                    && !(prop === 'length' && self[symbol].length === v)
+                    !(prop === 'length' && self[symbol].length === v)
                   ) {
                     bindForEach(value);
                     render(self, propertyKey);
@@ -277,39 +274,36 @@ export function Prop(normalize?: (value: any) => any): any {
                   return x;
                 }
               });
-              this[symbol][symbol] = { ignore: true };
             }
             bindForEach(value);
-            if (!this[symbol][symbol].init) {
-              this[symbol][symbol].init = true;
-            } else if (!this[symbol][symbol].ignore) {
-              this[symbol][symbol].ignore = true;
-              if (this[symbol] === value) {
-                throw new Error('Setting an array to itself is not allowed.');
+            // html not rendered yet!!!
+            if (!this[symbolMeta]) {
+              this[symbol].splice(0, this[symbol].length, ...value);
+            }
+            if (this[symbol] === value) {
+              throw new Error('Setting an array to itself is not allowed.');
+            } else {
+              // Process binded array...
+              if (value[meta]) {
+                // Mirror underlying values
+                this[symbolMeta].forEach(({ host: x }: any) => {
+                  value[meta].forEach(({ host: y }: any) => {
+                    x[symbol] = y[symbol];
+                  });
+                });
+                // Merge meta data
+                this[symbolMeta].forEach((item: any, key: any) => {
+                  value[meta].forEach(() => {
+                    value[meta].set(key, item);
+                  });
+                });
               } else {
-                // Process binded array...
-                if (value[meta]) {
-                  // Mirror underlying values
-                  this[symbolMeta].forEach(({ host: x }: any) => {
-                    value[meta].forEach(({ host: y }: any) => {
-                      x[symbol] = y[symbol];
-                    });
+                  // Keep symbol reference, replace data
+                  this[symbol].splice(0, this[symbol].length, ...value);
+                  this[symbolMeta] && this[symbolMeta].forEach(({ host }: any) => {
+                      render(host, propertyKey);
                   });
-                  // Merge meta data
-                  this[symbolMeta].forEach((item: any, key: any) => {
-                    value[meta].forEach(() => {
-                      value[meta].set(key, item);
-                    });
-                  });
-                } else {
-                    // Keep symbol reference, replace data
-                    this[symbol].splice(0, this[symbol].length, ...value);
-                    this[symbolMeta].forEach(({ host }: any) => {
-                        render(host, propertyKey);
-                    });
-                }
               }
-              this[symbol][symbol].ignore = false;
             }
           } else {
             this[symbol] = normalize ? normalize(value) : value;
@@ -498,6 +492,8 @@ function renderForEach(items: ArrayWithMetaAndBind) {
 function bindForEach(value: any[]) {
   value.forEach(function(v, i) {
     if (!hasProxy(v)) {
+      // keys should always be set, without it can't track
+      v.key ??= uuid();
       const symbol = Symbol(`${v.key}`);
       const symbolMeta = Symbol(`${v.key}:meta`);
       // @ts-ignore
