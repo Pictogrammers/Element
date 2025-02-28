@@ -420,7 +420,7 @@ const bind = Symbol('bind');
 
 interface ArrayWithMetaAndBind extends Array<any> {
   [key: number]: any;
-  [meta]: Map<HTMLElement, any>;
+  [meta]?: Map<HTMLElement, any>;
 }
 
 type ForEach = {
@@ -442,7 +442,7 @@ export function forEach({ container, items, type, create, update }: ForEach) {
 }
 
 function renderForEach(items: ArrayWithMetaAndBind) {
-  items[meta].forEach((value: any, c: HTMLElement) => {
+  items[meta]?.forEach((value: any, c: HTMLElement) => {
     // @ts-ignore
     const { type, update, create } = value;
     const existing = new Map();
