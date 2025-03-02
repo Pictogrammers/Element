@@ -1,6 +1,6 @@
 {
   "name": "@pictogrammers/element",
-  "version": "0.0.42",
+  "version": "0.0.43",
   "description": "Web Component Element for TypeScript",
   "module": "./dist/element.esm.js",
   "main": "./dist/element.common.js",
@@ -33,6 +33,6 @@
   "homepage": "https://github.com/Templarian/Element#readme",
   "devDependencies": {
     "npm-run-all": "^4.1.5",
-    "typescript": "^5.7.3"
+    "typescript": "^5.8.2"
   }
 }

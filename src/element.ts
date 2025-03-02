@@ -29,7 +29,7 @@ const style = Symbol('style');
 const parent = Symbol('parent');
 
 function uuid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
@@ -194,44 +194,50 @@ function render(self: any, propertyKey: string) {
 
 const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'with'];
 
+export function Test(target: Object, context: ClassFieldDecoratorContext) {
+  let value: any;
+
+  return (initialValue: any) => ({
+    get: () => {
+      console.log(`Getting value of ${String(context.name)}`);
+      return value;
+    },
+    set: (newValue: any) => {
+      console.log(`Setting value of ${String(context.name)} to ${newValue}`);
+      value = newValue;
+    },
+  });
+}
+
 export function Prop(normalize?: (value: any) => any): any {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor | any) {
-    const { constructor } = target;
-    if (!constructor.observedAttributes) {
-      constructor.observedAttributes = [];
-    }
-    const { observedAttributes } = constructor as Constructor;
-    if (!constructor.symbols) {
-      constructor.symbols = {};
-    }
-    const { symbols }: { symbols: any } = constructor as Constructor;
-    const normalizedPropertyKey = camelToDash(propertyKey);
-    constructor.observedAttributes = observedAttributes.concat([normalizedPropertyKey]);
+  return function <C, V>(_: Object, context: ClassFieldDecoratorContext<C, V>) {
+    const propertyKey = context.name as string;
     const symbol = Symbol(propertyKey);
     const symbolMeta = Symbol(`${propertyKey}:meta`);
-    symbols[propertyKey] = symbol;
-    if (descriptor) {
-      let get = descriptor.get!;
-      descriptor.get = function () {
-        return get.call(this);
-      };
-      let set = descriptor.set!;
-      descriptor.set = function (value: any) {
-        set.call(this, value);
-        this[symbol] = value;
-        render(this, propertyKey);
-      };
-    } else {
-      Object.defineProperty(target, propertyKey, {
-        get() {
+    context.addInitializer(function () {
+      const { constructor } = this as any;
+      if (!constructor.observedAttributes) {
+        constructor.observedAttributes = [];
+      }
+      const { observedAttributes } = constructor as Constructor;
+      if (!constructor.symbols) {
+        constructor.symbols = {};
+      }
+      const { symbols }: { symbols: any } = constructor as Constructor;
+      const normalizedPropertyKey = camelToDash(propertyKey);
+      constructor.observedAttributes = observedAttributes.concat([normalizedPropertyKey]);
+
+      symbols[propertyKey] = symbol;
+      Reflect.defineProperty(this as any, propertyKey, {
+        get(this: any) {
           return this[symbol];
         },
-        set(value) {
+        set(this: any, value: any) {
           if (isArray(value)) {
             if (value !== undefined && !isArray(value)) {
               throw new PropError(
                 `Array "${propertyKey}" (Prop) initialized already. Reassignments must be array type.`,
-                Object.getOwnPropertyDescriptor(target, propertyKey)?.set
+                Object.getOwnPropertyDescriptor(this, propertyKey)?.set
               );
             }
             if (!this[symbol]) {
@@ -298,11 +304,11 @@ export function Prop(normalize?: (value: any) => any): any {
                   });
                 });
               } else {
-                  // Keep symbol reference, replace data
-                  this[symbol].splice(0, this[symbol].length, ...value);
-                  this[symbolMeta] && this[symbolMeta].forEach(({ host }: any) => {
-                      render(host, propertyKey);
-                  });
+                // Keep symbol reference, replace data
+                this[symbol].splice(0, this[symbol].length, ...value);
+                this[symbolMeta] && this[symbolMeta].forEach(({ host }: any) => {
+                  render(host, propertyKey);
+                });
               }
             }
           } else {
@@ -311,20 +317,24 @@ export function Prop(normalize?: (value: any) => any): any {
           }
         }
       });
-    }
+    });
+    return function (this: any, initialValue: any) {
+      this[symbol] = initialValue;
+    };
   };
 }
 
 export function Part(): any {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    if (descriptor) {
-      throw `Invalid, value must be undefined \`@Part() ${propertyKey};\``;
-    }
-    Object.defineProperty(target, propertyKey, {
-      get() {
-        const key = propertyKey.replace(/^\$/, '');
-        return this.shadowRoot?.querySelector(`[part~=${key}]`);
-      }
+  return function (_: Object, context: ClassFieldDecoratorContext) {
+    const propertyKey = context.name as string;
+    const key = propertyKey.replace(/^\$/, '');
+    context.addInitializer(function (this: any) {
+      let cache: any = null;
+      Reflect.defineProperty(this, propertyKey, {
+        get() {
+          return cache ?? (cache = this.shadowRoot?.querySelector(`[part~=${key}]`));
+        }
+      })
     });
   };
 }
@@ -490,7 +500,7 @@ function renderForEach(items: ArrayWithMetaAndBind) {
 
 // todo: looping all items is lazy
 function bindForEach(value: any[]) {
-  value.forEach(function(v, i) {
+  value.forEach(function (v, i) {
     if (!hasProxy(v)) {
       // keys should always be set, without it can't track
       v.key ??= uuid();
