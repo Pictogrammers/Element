@@ -192,94 +192,31 @@ function render(self: any, propertyKey: string) {
   }
 }
 
-const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'with'];
-
-export function Test(target: Object, context: ClassFieldDecoratorContext) {
-  let value: any;
-
-  return (initialValue: any) => ({
-    get: () => {
-      console.log(`Getting value of ${String(context.name)}`);
-      return value;
-    },
-    set: (newValue: any) => {
-      console.log(`Setting value of ${String(context.name)} to ${newValue}`);
-      value = newValue;
-    },
-  });
+function getSymbolType(value: any) {
+  return isArray(value) ? 'array' : typeof value;
 }
+
+const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'with'];
 
 export function Prop(normalize?: (value: any) => any): any {
   return function <C, V>(_: Object, context: ClassFieldDecoratorContext<C, V>) {
     const propertyKey = context.name as string;
     const symbol = Symbol(propertyKey);
+    const symbolType = Symbol(`${propertyKey}:type`);
     const symbolMeta = Symbol(`${propertyKey}:meta`);
-    context.addInitializer(function () {
-      const { constructor } = this as any;
-      if (!constructor.observedAttributes) {
-        constructor.observedAttributes = [];
-      }
-      const { observedAttributes } = constructor as Constructor;
-      if (!constructor.symbols) {
-        constructor.symbols = {};
-      }
-      const { symbols }: { symbols: any } = constructor as Constructor;
-      const normalizedPropertyKey = camelToDash(propertyKey);
-      constructor.observedAttributes = observedAttributes.concat([normalizedPropertyKey]);
-
-      symbols[propertyKey] = symbol;
-      Reflect.defineProperty(this as any, propertyKey, {
-        get(this: any) {
+    context.addInitializer(function (this: any) {
+      Reflect.defineProperty(this, propertyKey, {
+        get() {
           return this[symbol];
         },
-        set(this: any, value: any) {
-          if (isArray(value)) {
-            if (value !== undefined && !isArray(value)) {
-              throw new PropError(
-                `Array "${propertyKey}" (Prop) initialized already. Reassignments must be array type.`,
-                Object.getOwnPropertyDescriptor(this, propertyKey)?.set
-              );
-            }
-            if (!this[symbol]) {
-              // todo: update function below to () => {}
-              const self = this;
-              this[symbol] = new Proxy(value, {
-                get: function (target, prop: any) {
-                  if (prop === meta) {
-                    return self[symbolMeta];
-                  }
-                  if (
-                    self[symbolMeta]
-                    && arrayRender.includes(prop)
-                    && typeof target[prop] === 'function'
-                  ) {
-                    return (...args: any) => {
-                      const result = target[prop](...args);
-                      bindForEach(target);
-                      renderForEach(self[symbol]);
-                      self[symbolMeta].forEach(({ host }: any) => {
-                        render(host, propertyKey);
-                      });
-                      return result;
-                    };
-                  }
-                  return Reflect.get(target, prop);
-                },
-                set: function (target, prop, v) {
-                  if (prop === meta) {
-                    self[symbolMeta] = v;
-                    return true;
-                  }
-                  const x = Reflect.set(target, prop, v);
-                  if (
-                    !(prop === 'length' && self[symbol].length === v)
-                  ) {
-                    bindForEach(value);
-                    render(self, propertyKey);
-                  }
-                  return x;
-                }
-              });
+        set(value) {
+          const newSymbolType = getSymbolType(value);
+          if (propertyKey !== 'index' && this[symbolType] !== newSymbolType) {
+            throw new Error(`@Prop() ${propertyKey} with type '${this[symbolType]}' cannot be set to ${newSymbolType}.`);
+          }
+          if (this[symbolType] === 'array') {
+            if (!isArray(value)) {
+              throw new PropError(`Array "${propertyKey}" (Prop) initialized already. Reassignments must be array type.`, Object.getOwnPropertyDescriptor(this, propertyKey)?.set);
             }
             bindForEach(value);
             // html not rendered yet!!!
@@ -288,30 +225,27 @@ export function Prop(normalize?: (value: any) => any): any {
             }
             if (this[symbol] === value) {
               throw new Error('Setting an array to itself is not allowed.');
-            } else {
-              // Process binded array...
-              if (value[meta]) {
-                // Mirror underlying values
-                this[symbolMeta].forEach(({ host: x }: any) => {
-                  value[meta].forEach(({ host: y }: any) => {
-                    x[symbol] = y[symbol];
-                  });
-                });
-                // Merge meta data
-                this[symbolMeta].forEach((item: any, key: any) => {
-                  value[meta].forEach(() => {
-                    value[meta].set(key, item);
-                  });
-                });
-              } else {
-                // Keep symbol reference, replace data
-                this[symbol].splice(0, this[symbol].length, ...value);
-                this[symbolMeta] && this[symbolMeta].forEach(({ host }: any) => {
-                  render(host, propertyKey);
-                });
-              }
             }
-          } else {
+            // Process binded array...
+            if (value[meta]) {
+              // Mirror underlying values
+              this[symbolMeta].forEach(({ host: x }: any) => {
+                value[meta].forEach(({ host: y }: any) => {
+                  x[symbol] = y[symbol];
+                });
+              });
+              // Merge meta data
+              this[symbolMeta].forEach((item: any, key: any) => {
+                value[meta].forEach(() => {
+                  value[meta].set(key, item);
+                });
+              });
+            }
+            else {
+              this[symbol].splice(0, this[symbol].length, ...value);
+            }
+          }
+          else {
             this[symbol] = normalize ? normalize(value) : value;
             render(this, propertyKey);
           }
@@ -319,7 +253,67 @@ export function Prop(normalize?: (value: any) => any): any {
       });
     });
     return function (this: any, initialValue: any) {
-      this[symbol] = initialValue;
+      if (initialValue === undefined && propertyKey !== 'index') {
+        throw new Error(`@Prop() ${propertyKey} must have an initial value defined.`);
+      } else if (initialValue !== undefined && propertyKey === 'index') {
+        throw new Error(`@Prop() index must not have an initial value defined.`);
+      }
+      if (initialValue === true) {
+        throw new Error(`@Prop() ${propertyKey} boolean must initialize to false.`);
+      }
+      // Web Component
+      const { constructor } = this as any;
+      constructor.observedAttributes ??= [];
+      if (!constructor.symbols) {
+        constructor.symbols = {};
+      }
+      const { symbols } = constructor;
+      const normalizedPropertyKey = camelToDash(propertyKey);
+      constructor.observedAttributes.push(normalizedPropertyKey);
+      symbols[propertyKey] = symbol;
+      // Rest
+      this[symbolType] = getSymbolType(initialValue);
+      if (this[symbolType] === 'array') {
+        const self = this;
+        bindForEach(initialValue);
+        this[symbol] = new Proxy(initialValue, {
+          get: function (target: any, prop: any) {
+            if (prop === meta) {
+              return self[symbolMeta];
+            }
+            if (self[symbolMeta]
+              && arrayRender.includes(prop)
+              && typeof target[prop] === 'function') {
+              // @ts-ignore
+              return (...args) => {
+                const result = target[prop](...args);
+                bindForEach(target);
+                renderForEach(self[symbol]);
+                self[symbolMeta].forEach(({ host }: any) => {
+                  render(host, propertyKey);
+                });
+                return result;
+              };
+            }
+            return Reflect.get(target, prop);
+          },
+          set: function (target, prop, v) {
+            if (prop === meta) {
+              self[symbolMeta] = v;
+              return true;
+            }
+            const x = Reflect.set(target, prop, v);
+            if (!(prop === 'length' && self[symbol].length === v)) {
+              //bindForEach(value);
+              render(self, propertyKey);
+            }
+            return x;
+          }
+        });
+      } else {
+        // todo watch objects???
+        this[symbol] = initialValue;
+      }
     };
   };
 }
@@ -339,25 +333,39 @@ export function Part(): any {
   };
 }
 
-export function Local(initialValue: string | null = null, key?: string): any {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+const nullSymbol = Symbol('null');
+export function Local(key?: string): any {
+  return function (_: any, context: ClassFieldDecoratorContext) {
+    const propertyKey = context.name as string;
+    const symbol = Symbol(propertyKey);
     const getKey = (self: any) => {
       return (key ? key : `${self.constructor.name}:${propertyKey}`) as string;
     };
-    Object.defineProperty(target, propertyKey, {
-      get() {
-        const k = getKey(this);
-        return window.localStorage.getItem(k) || initialValue;
-      },
-      set(value: string | null) {
-        const k = getKey(this);
-        if (value === null) {
-          window.localStorage.removeItem(k);
-        } else {
-          window.localStorage.setItem(k, value);
+    context.addInitializer(function (this: any) {
+      Reflect.defineProperty(this as any, propertyKey, {
+        get() {
+          const k = getKey(this);
+          if (window.localStorage.getItem(k) === null) {
+            return this[symbol];
+          } else {
+            return window.localStorage.getItem(k);
+          }
+        },
+        set(value: string | null) {
+          const k = getKey(this);
+          if (value === null || value === this[symbol]) {
+            // todo? Reset to initial value
+            window.localStorage.removeItem(k);
+          } else {
+            window.localStorage.setItem(k, value);
+          }
         }
-      }
+      });
+      return function (this: any, initialValue: any) {
+        this[symbol] = initialValue;
+      };
     });
+
   };
 }
 
@@ -472,8 +480,8 @@ function renderForEach(items: ArrayWithMetaAndBind) {
         update && update(existing.get(`${key}`), options);
       } else {
         option.type = type(options);
-        const { observedAttributes } = option.type;
         const $new = document.createElement(camelToDash(option.type.name), option.type);
+        const { observedAttributes } = option.type;
         option[meta].set($new, {});
         $new.dataset.key = `${option.key}`;
         if (!options.hasOwnProperty('index')) {
