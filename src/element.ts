@@ -52,7 +52,10 @@ function dashToCamel(str: string): string {
 }
 
 export function Component(config: CustomElementConfig = {}) {
-  return function (cls: any, _context?: any) {
+  return function (cls: any, context?: any) {
+    if (context.kind !== 'class') {
+      throw new Error('@Component() can only decorate a class');
+    }
     if (cls.prototype[parent]) {
       cls.prototype[parent].push(cls.prototype);
       cls.prototype[style] = `${cls.prototype[style]}${config.style}`;
@@ -81,17 +84,15 @@ export function Component(config: CustomElementConfig = {}) {
           this.attachShadow({ mode: 'open' });
         }
       } else if (!this[init]) {
-        const $template = document.createElement('template');
-        let content = cls.prototype[template] || '';
-        if (cls.prototype[style]) {
-          content += `<style>${cls.prototype[style]}</style>`;
-        }
-        $template.innerHTML = content;
-        const $node = document.importNode($template.content, true);
         if (config.useShadow === false) {
-          this.appendChild($node);
+          throw new Error('unsupported');
         } else {
-          this.attachShadow({ mode: 'open' }).appendChild($node);
+          const $template = document.createElement('template');
+          $template.innerHTML = cls.prototype[template] || '';
+          const $node = document.importNode($template.content, true);
+          const shadowRoot = this.attachShadow({ mode: 'open' });
+          shadowRoot.adoptedStyleSheets = [cls.prototype[style]];
+          shadowRoot.appendChild($node);
         }
       } else if (this[init] && config.style) {
         /*if (this.shadowRoot) {
@@ -156,9 +157,15 @@ export function Component(config: CustomElementConfig = {}) {
       this[normalizedName] = newValue;
     };
 
-    if (config.selector && !window.customElements.get(config.selector)) {
-      window.customElements.define(config.selector, cls);
-    }
+    // Base components may not define a selector
+    context.addInitializer(function (this: any) {
+      if (config.selector) {
+        if (window.customElements.get(config.selector)) {
+          throw new Error(`@Component() ${context.name} duplicate selector '${config.selector}'`);
+        }
+        window.customElements.define(config.selector, cls);
+      }
+    });
   };
 }
 
