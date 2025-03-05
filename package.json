@@ -1,6 +1,6 @@
 {
   "name": "@pictogrammers/element",
-  "version": "0.0.45",
+  "version": "0.0.50",
   "description": "Web Component Element for TypeScript",
   "module": "./dist/element.esm.js",
   "main": "./dist/element.common.js",
@@ -14,6 +14,7 @@
     "build:rename:esm": "node -e \"require('fs').rename('dist/element.js', 'dist/element.esm.js', () => {})\"",
     "build:common": "tsc -p tsconfig.common.json",
     "build:esm": "tsc -p tsconfig.esm.json",
+    "prepublishOnly": "run-s build:esm",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

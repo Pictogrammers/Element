@@ -1,7 +1,9 @@
+import './global';
+
 interface CustomElementConfig {
   selector?: string;
   template?: string;
-  style?: string;
+  style?: CSSStyleSheet;
   useShadow?: boolean;
 }
 
@@ -58,14 +60,14 @@ export function Component(config: CustomElementConfig = {}) {
     }
     if (cls.prototype[parent]) {
       cls.prototype[parent].push(cls.prototype);
-      cls.prototype[style] = `${cls.prototype[style]}${config.style}`;
+      cls.prototype[style] = [cls.prototype[style], config.style];
       cls.prototype[template] = extendTemplate(
         cls.prototype[template],
         config.template || null
       );
     } else {
       cls.prototype[parent] = [cls.prototype];
-      cls.prototype[style] = config.style || '';
+      cls.prototype[style] = [config.style];
       cls.prototype[template] = config.template || '';
     }
 
@@ -91,7 +93,7 @@ export function Component(config: CustomElementConfig = {}) {
           $template.innerHTML = cls.prototype[template] || '';
           const $node = document.importNode($template.content, true);
           const shadowRoot = this.attachShadow({ mode: 'open' });
-          shadowRoot.adoptedStyleSheets = [cls.prototype[style]];
+          shadowRoot.adoptedStyleSheets = cls.prototype[style];
           shadowRoot.appendChild($node);
         }
       } else if (this[init] && config.style) {
