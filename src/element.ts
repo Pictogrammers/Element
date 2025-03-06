@@ -60,14 +60,14 @@ export function Component(config: CustomElementConfig = {}) {
     }
     if (cls.prototype[parent]) {
       cls.prototype[parent].push(cls.prototype);
-      cls.prototype[style] = [cls.prototype[style], config.style];
+      cls.prototype[style].push(config.style);
       cls.prototype[template] = extendTemplate(
         cls.prototype[template],
         config.template || null
       );
     } else {
       cls.prototype[parent] = [cls.prototype];
-      cls.prototype[style] = [config.style];
+      cls.prototype[style] = config.style ? [config.style] : [];
       cls.prototype[template] = config.template || '';
     }
 
