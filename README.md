@@ -101,6 +101,8 @@ set selected(value: string | boolean) {
 
 Components can create repeated lists of other components by using the `forEach` utility. A unique `key` property is required in each item of the items array (defaults to a uuid if not provided). Any updates will sync values to the component provided in the type function.
 
+> **Note:** `item` in the callbacks is readonly and contains `index`.
+
 ```typescript
 import { forEach } from '@pictogrammers/element';
 
@@ -118,7 +120,13 @@ import UiItem from 'ui/item';
       create: ($item, item) => {
         // after creation of $item element
       },
-      update: ($item, item) => {
+      connect: ($item, item, $items) => {
+        // after connectedCallback
+      },
+      disconnect: ($item, item, $items) => {
+        // before disconnectedCallback
+      },
+      update: ($item, item, $items) => {
         // after every $item update
       },
     });
