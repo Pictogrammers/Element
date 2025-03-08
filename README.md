@@ -110,6 +110,11 @@ import UiItem from 'ui/item';
 
 // ... in element class
 
+  // Public
+  @Prop() options: any[] = [];
+  // Private
+  @Prop() #options: any[] = [];
+
   connectedCallback() {
     forEach({
       container: this.$items,
