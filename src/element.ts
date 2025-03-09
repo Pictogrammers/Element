@@ -206,6 +206,7 @@ function getSymbolType(value: any) {
 }
 
 const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'with'];
+const arrayRead = ['forEach', 'map'];
 
 export function Prop(normalize?: (value: any) => any): any {
   return function <C, V>(_: Object, context: ClassFieldDecoratorContext<C, V>) {
@@ -219,7 +220,8 @@ export function Prop(normalize?: (value: any) => any): any {
           return this[symbol];
         },
         set(value) {
-          const newSymbolType = getSymbolType(value);
+          // ToDo: cleanup
+          const newSymbolType = getSymbolType(normalize ? normalize(value) : value);
           if (propertyKey !== 'index' && this[symbolType] !== newSymbolType) {
             throw new Error(`@Prop() ${propertyKey} with type '${this[symbolType]}' cannot be set to ${newSymbolType}.`);
           }
@@ -271,58 +273,66 @@ export function Prop(normalize?: (value: any) => any): any {
         throw new Error(`@Prop() ${propertyKey} boolean must initialize to false.`);
       }
       // Web Component
-      const { constructor } = this as any;
-      constructor.observedAttributes ??= [];
-      if (!constructor.symbols) {
-        constructor.symbols = {};
+      if (!context.private) {
+        const { constructor } = this as any;
+        constructor.observedAttributes ??= [];
+        if (!constructor.symbols) {
+          constructor.symbols = {};
+        }
+        const { symbols } = constructor;
+        const normalizedPropertyKey = camelToDash(propertyKey);
+        constructor.observedAttributes.push(normalizedPropertyKey);
+        symbols[propertyKey] = symbol;
       }
-      const { symbols } = constructor;
-      const normalizedPropertyKey = camelToDash(propertyKey);
-      constructor.observedAttributes.push(normalizedPropertyKey);
-      symbols[propertyKey] = symbol;
       // Rest
       this[symbolType] = getSymbolType(initialValue);
       if (this[symbolType] === 'array') {
-        const self = this;
-        bindForEach(initialValue);
-        this[symbol] = new Proxy(initialValue, {
-          get: function (target: any, prop: any) {
-            if (prop === meta) {
-              return self[symbolMeta];
-            }
-            if (self[symbolMeta]
-              && arrayRender.includes(prop)
-              && typeof target[prop] === 'function') {
-              // @ts-ignore
-              return (...args) => {
-                const result = target[prop](...args);
-                bindForEach(target);
-                renderForEach(self[symbol]);
-                self[symbolMeta].forEach(({ host }: any) => {
-                  render(host, propertyKey);
-                });
-                return result;
-              };
-            }
-            return Reflect.get(target, prop);
-          },
-          set: function (target, prop, v) {
-            if (prop === meta) {
-              self[symbolMeta] = v;
-              return true;
-            }
-            const x = Reflect.set(target, prop, v);
-            if (!(prop === 'length' && self[symbol].length === v)) {
-              //bindForEach(value);
-              render(self, propertyKey);
-            }
-            return x;
-          }
-        });
-      } else {
-        // todo watch objects???
         this[symbol] = initialValue;
+        return new Proxy(initialValue, {
+            get: (target, key) => {
+                if (key === meta) {
+                    return this[symbolMeta];
+                }
+                if (this[symbolMeta]
+                    && arrayRender.includes(key as any)
+                    && typeof target[key] === 'function') {
+                    // @ts-ignore
+                    const self = this;
+                    return (...args: any) => {
+                        const result = target[key](...args);
+                        bindForEach(target);
+                        renderForEach(target, self[symbolMeta]);
+                        self[symbolMeta].forEach(({ host }: any) => {
+                            render(host, propertyKey);
+                        });
+                        return result;
+                    };
+                } else if (arrayRead.includes(key as any)) {
+                    return (...args: any) => {
+                        return target[key](...args);
+                    };
+                }
+                return Reflect.get(this[symbol], key);
+            },
+            set: (target, key, v) => {
+                if (key === meta) {
+                    this[symbolMeta] = v;
+                    return true;
+                }
+                const x = Reflect.set(target, key, v);
+                if (!(key === 'length' && this[symbol].length === v)) {
+                    render(this, propertyKey);
+                }
+                this[symbol] = v;
+                return x;
+            }
+        });
       }
+      // todo watch objects???
+      this[symbol] = normalize
+        ? normalize(this.getAttribute(propertyKey) ?? initialValue)
+        : this.getAttribute(propertyKey) ?? initialValue;
+      return this[symbol];
     };
   };
 }
@@ -456,37 +466,48 @@ type ForEach = {
   type: (item: any) => any;
   create?: ($item: HTMLElement, item: any) => void;
   update?: ($item: HTMLElement, item: any) => void;
+  connect?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
+  disconnect?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
 }
 
-export function forEach({ container, items, type, create, update }: ForEach) {
+export function forEach({ container, items, type, create, connect, disconnect, update }: ForEach) {
   const { host } = container.getRootNode() as any as { host: HTMLElement };
   items[meta] ??= new Map<HTMLElement, any>();
-  items[meta].set(container, { host, type, create, update });
+  items[meta].set(container, { host, type, create, connect, disconnect, update });
   // already attached, so init
   if (items.length) {
     renderForEach(items);
   }
 }
 
-function renderForEach(items: ArrayWithMetaAndBind) {
-  items[meta]?.forEach((value: any, c: HTMLElement) => {
+function renderForEach(items: ArrayWithMetaAndBind, privateMeta?: Map<HTMLElement, any>) {
+  const actualMeta = privateMeta ?? items[meta];
+  actualMeta?.forEach((value: any, c: HTMLElement) => {
     // @ts-ignore
-    const { type, update, create } = value;
+    const { type, create, connect, disconnect, update } = value;
     const existing = new Map();
+    const existingKeys: string[] = [];
     Array.from(c.children).map(($item: any) => {
       existing.set($item.dataset.key, $item);
+      existingKeys.push($item.dataset.key);
     });
     // Delete elements no longer in list
     const latest = items.map(x => `${x.key}`);
-    const deleteItems = Array.from(existing.keys()).filter(x => !latest.includes(x));
-    deleteItems.forEach(x => existing.get(x).remove());
+    const deleteItems = existingKeys.filter(x => !latest.includes(x));
+    deleteItems.forEach((x) => {
+      existingKeys.findIndex(y => y === x);
+      const delEle = existing.get(x);
+      disconnect && disconnect(delEle, null, c.children)
+      delEle.remove();
+    });
     let previous: any = null;
     // Update or Insert elements
     items.forEach((option, i) => {
       const { key, ...options } = option;
       if (existing.has(`${key}`)) {
         // delete this?
-        update && update(existing.get(`${key}`), options);
+        options.index = i;
+        update && update(existing.get(`${key}`), options, c.children);
       } else {
         option.type = type(options);
         const $new = document.createElement(camelToDash(option.type.name), option.type);
@@ -508,6 +529,7 @@ function renderForEach(items: ArrayWithMetaAndBind) {
         } else {
           c.prepend($new);
         }
+        connect && connect($new, options, c.children);
         existing.set(`${option.key}`, $new);
       }
       previous = `${option.key}`;
@@ -540,6 +562,7 @@ function bindForEach(value: any[]) {
           if (prop === meta) {
             // @ts-ignore
             value[symbolMeta] = val;
+            return true;
           }
           // @ts-ignore
           value[symbol][prop] = val;
