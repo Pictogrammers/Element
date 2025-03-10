@@ -216,10 +216,47 @@ export function Prop(normalize?: (value: any) => any): any {
     const symbolMeta = Symbol(`${propertyKey}:meta`);
     context.addInitializer(function (this: any) {
       Reflect.defineProperty(this, propertyKey, {
-        get() {
-          return this[symbol];
+        get: () => {
+          if (this[symbolType] !== 'array') {
+              return this[symbol];
+          }
+          return new Proxy(this[symbol], {
+              get: (target: any, key: any) => {
+                  if (key === meta) {
+                      return this[symbolMeta];
+                  }
+                  if (this[symbolMeta]
+                      && arrayRender.includes(key)
+                      && typeof target[key] === 'function') {
+                      // @ts-ignore
+                      const self = this;
+                      return (...args: any) => {
+                          const result = target[key](...args);
+                          bindForEach(target);
+                          renderForEach(target, self[symbolMeta]);
+                          self[symbolMeta].forEach(({ host }: any) => {
+                              render(host, propertyKey);
+                          });
+                          return result;
+                      };
+                  }
+                  else if (arrayRead.includes(key)) {
+                      return (...args: any) => {
+                          return target[key](...args);
+                      };
+                  }
+                  return Reflect.get(this[symbol], key);
+              },
+              set: (target, key, v) => {
+                  if (key === meta) {
+                      this[symbolMeta] = v;
+                      return true;
+                  }
+                  return Reflect.set(target, key, v);
+              }
+          });
         },
-        set(value) {
+        set: (value) => {
           // ToDo: cleanup
           const newSymbolType = getSymbolType(normalize ? normalize(value) : value);
           if (propertyKey !== 'index' && this[symbolType] !== newSymbolType) {
@@ -230,10 +267,6 @@ export function Prop(normalize?: (value: any) => any): any {
               throw new PropError(`Array "${propertyKey}" (Prop) initialized already. Reassignments must be array type.`, Object.getOwnPropertyDescriptor(this, propertyKey)?.set);
             }
             bindForEach(value);
-            // html not rendered yet!!!
-            if (!this[symbolMeta]) {
-              this[symbol].splice(0, this[symbol].length, ...value);
-            }
             if (this[symbol] === value) {
               throw new Error('Setting an array to itself is not allowed.');
             }
@@ -254,6 +287,10 @@ export function Prop(normalize?: (value: any) => any): any {
             }
             else {
               this[symbol].splice(0, this[symbol].length, ...value);
+              // has to be in the dom!!!
+              if (this[symbolMeta]) {
+                renderForEach(this[symbol], this[symbolMeta]);
+              }
             }
           }
           else {
