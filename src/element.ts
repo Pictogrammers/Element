@@ -502,7 +502,7 @@ type ForEach = {
   items: ArrayWithMetaAndBind;
   type: (item: any) => any;
   create?: ($item: HTMLElement, item: any) => void;
-  update?: ($item: HTMLElement, item: any) => void;
+  update?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
   connect?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
   disconnect?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
 }
@@ -518,6 +518,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
 }
 
 function renderForEach(items: ArrayWithMetaAndBind, privateMeta?: Map<HTMLElement, any>) {
+  // todo: make a list of cached item keys
   const actualMeta = privateMeta ?? items[meta];
   actualMeta?.forEach((value: any, c: HTMLElement) => {
     // @ts-ignore
@@ -534,7 +535,13 @@ function renderForEach(items: ArrayWithMetaAndBind, privateMeta?: Map<HTMLElemen
     deleteItems.forEach((x) => {
       existingKeys.findIndex(y => y === x);
       const delEle = existing.get(x);
-      disconnect && disconnect(delEle, null, c.children)
+      const { observedAttributes } = delEle.constructor;
+      // Extract values from deleted element
+      const o = observedAttributes.reduce((obj: any, p: string) => {
+        obj[p] = delEle[p];
+        return obj;
+      }, {});
+      disconnect && disconnect(delEle, o, c.children);
       delEle.remove();
     });
     let previous: any = null;
