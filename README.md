@@ -19,9 +19,10 @@ To make things easier setup the project assuming the custom element `<hello-worl
       📃 world.ts
       📃 world.html
       📃 world.css
-📃 rollup.config.js
-📃 tsconfig.json
+📃 jest.config.json
 📃 package.json
+📃 tsconfig.json
+📃 webpack.config.js
 ```
 
 ### Class (`world.ts`)
