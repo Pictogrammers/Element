@@ -44,7 +44,7 @@ export default class HelloWorld extends HTMLElement {
   
   render(changes) {
     if (changes.message) {
-      this.$message.innerText = this.message;
+      this.$message.textContent = this.message;
     }
   }
 }
@@ -92,8 +92,10 @@ set selected(value: string | boolean) {
 }
 ```
 
-- `normalizeInteger` - Wrapper for `parseInt(value, 10)`.
-- `normalizeFloat` - Wrapper for `parseFloat(value)`.
+> **Note:** Instead of ever using `get` / `set` always use the `render` method for managing changes to prevent unncessary operations.
+
+- `normalizeInt` - Wrapper for ``parseInt(`${value}`, 10)``.
+- `normalizeFloat` - Wrapper for ``parseFloat(`${value}`)``.
 - `normalizeBoolean` - Handles `bool` type including string `'true'` / `'false'`.
 - `normalizeString` - Wrapper for `` `${value}` ``.
 
