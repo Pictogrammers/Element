@@ -201,15 +201,23 @@ export default class HelloWorldButton extends HelloWorld {
 }
 ```
 
-### `@Local(initialValue[, key])`
+### `@Local(key: string)`
 
-To access localStorage values bind them to a class level property.
+To access `localStorage` values bind them to a class level property with a `Map` type.
 
 ```js
-// Default to 42
-@Local('42') foo;
-// Default to 42 and share a global key
-@Local('42', 'sharedKeyName') foo;
+// store:toggle
+@Local('store') store = new Map([
+  ['toggle', false]
+]);
+// Caches to a private property
+@Local('store') #store = new Map([
+  ['someobj', null]
+]);
+
+// somehere in your code
+this.store.get('toggle');
+this.store.set('toggle' true);
 ```
 
 ## Development

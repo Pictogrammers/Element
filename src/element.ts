@@ -218,42 +218,42 @@ export function Prop(normalize?: (value: any) => any): any {
       Reflect.defineProperty(this, propertyKey, {
         get: () => {
           if (this[symbolType] !== 'array') {
-              return this[symbol];
+            return this[symbol];
           }
           return new Proxy(this[symbol], {
-              get: (target: any, key: any) => {
-                  if (key === meta) {
-                      return this[symbolMeta];
-                  }
-                  if (this[symbolMeta]
-                      && arrayRender.includes(key)
-                      && typeof target[key] === 'function') {
-                      // @ts-ignore
-                      const self = this;
-                      return (...args: any) => {
-                          const result = target[key](...args);
-                          bindForEach(target);
-                          renderForEach(target, self[symbolMeta]);
-                          self[symbolMeta].forEach(({ host }: any) => {
-                              render(host, propertyKey);
-                          });
-                          return result;
-                      };
-                  }
-                  else if (arrayRead.includes(key)) {
-                      return (...args: any) => {
-                          return target[key](...args);
-                      };
-                  }
-                  return Reflect.get(this[symbol], key);
-              },
-              set: (target, key, v) => {
-                  if (key === meta) {
-                      this[symbolMeta] = v;
-                      return true;
-                  }
-                  return Reflect.set(target, key, v);
+            get: (target: any, key: any) => {
+              if (key === meta) {
+                return this[symbolMeta];
               }
+              if (this[symbolMeta]
+                && arrayRender.includes(key)
+                && typeof target[key] === 'function') {
+                // @ts-ignore
+                const self = this;
+                return (...args: any) => {
+                  const result = target[key](...args);
+                  bindForEach(target);
+                  renderForEach(target, self[symbolMeta]);
+                  self[symbolMeta].forEach(({ host }: any) => {
+                    render(host, propertyKey);
+                  });
+                  return result;
+                };
+              }
+              else if (arrayRead.includes(key)) {
+                return (...args: any) => {
+                  return target[key](...args);
+                };
+              }
+              return Reflect.get(this[symbol], key);
+            },
+            set: (target, key, v) => {
+              if (key === meta) {
+                this[symbolMeta] = v;
+                return true;
+              }
+              return Reflect.set(target, key, v);
+            }
           });
         },
         set: (value) => {
@@ -326,43 +326,43 @@ export function Prop(normalize?: (value: any) => any): any {
       if (this[symbolType] === 'array') {
         this[symbol] = initialValue;
         return new Proxy(initialValue, {
-            get: (target, key) => {
-                if (key === meta) {
-                    return this[symbolMeta];
-                }
-                if (this[symbolMeta]
-                    && arrayRender.includes(key as any)
-                    && typeof target[key] === 'function') {
-                    // @ts-ignore
-                    const self = this;
-                    return (...args: any) => {
-                        const result = target[key](...args);
-                        bindForEach(target);
-                        renderForEach(target, self[symbolMeta]);
-                        self[symbolMeta].forEach(({ host }: any) => {
-                            render(host, propertyKey);
-                        });
-                        return result;
-                    };
-                } else if (arrayRead.includes(key as any)) {
-                    return (...args: any) => {
-                        return target[key](...args);
-                    };
-                }
-                return Reflect.get(this[symbol], key);
-            },
-            set: (target, key, v) => {
-                if (key === meta) {
-                    this[symbolMeta] = v;
-                    return true;
-                }
-                const x = Reflect.set(target, key, v);
-                if (!(key === 'length' && this[symbol].length === v)) {
-                    render(this, propertyKey);
-                }
-                this[symbol] = v;
-                return x;
+          get: (target, key) => {
+            if (key === meta) {
+              return this[symbolMeta];
             }
+            if (this[symbolMeta]
+              && arrayRender.includes(key as any)
+              && typeof target[key] === 'function') {
+              // @ts-ignore
+              const self = this;
+              return (...args: any) => {
+                const result = target[key](...args);
+                bindForEach(target);
+                renderForEach(target, self[symbolMeta]);
+                self[symbolMeta].forEach(({ host }: any) => {
+                  render(host, propertyKey);
+                });
+                return result;
+              };
+            } else if (arrayRead.includes(key as any)) {
+              return (...args: any) => {
+                return target[key](...args);
+              };
+            }
+            return Reflect.get(this[symbol], key);
+          },
+          set: (target, key, v) => {
+            if (key === meta) {
+              this[symbolMeta] = v;
+              return true;
+            }
+            const x = Reflect.set(target, key, v);
+            if (!(key === 'length' && this[symbol].length === v)) {
+              render(this, propertyKey);
+            }
+            this[symbol] = v;
+            return x;
+          }
         });
       }
       // todo watch objects???
@@ -389,39 +389,52 @@ export function Part(): any {
   };
 }
 
-const nullSymbol = Symbol('null');
-export function Local(key?: string): any {
+/**
+ * Store data via a Map into LocalStorage
+ * @param key String
+ * @returns Value
+ */
+export function Local(key: string): any {
   return function (_: any, context: ClassFieldDecoratorContext) {
     const propertyKey = context.name as string;
-    const symbol = Symbol(propertyKey);
-    const getKey = (self: any) => {
-      return (key ? key : `${self.constructor.name}:${propertyKey}`) as string;
-    };
-    context.addInitializer(function (this: any) {
-      Reflect.defineProperty(this as any, propertyKey, {
-        get() {
-          const k = getKey(this);
-          if (window.localStorage.getItem(k) === null) {
-            return this[symbol];
-          } else {
-            return window.localStorage.getItem(k);
-          }
-        },
-        set(value: string | null) {
-          const k = getKey(this);
-          if (value === null || value === this[symbol]) {
-            // todo? Reset to initial value
-            window.localStorage.removeItem(k);
-          } else {
-            window.localStorage.setItem(k, value);
+    return function (initialValue: Map<string, any>) {
+      if (!(initialValue instanceof Map)) {
+        throw new Error('@Local(key) property must be type Map');
+      }
+      return new Proxy(initialValue, {
+        get(target, prop: string) {
+          switch (prop) {
+            case 'get':
+              return (k: string) => {
+                if (!initialValue.has(k)) {
+                  throw new Error(`@Local(key) missing key ${k}`);
+                }
+                const storeKey = `${key}:${k}`;
+                if (window.localStorage.getItem(storeKey) === null) {
+                  return initialValue.get(k);
+                } else {
+                  return JSON.parse(window.localStorage.getItem(storeKey) ?? 'null');
+                }
+              };
+            case 'set':
+              return (k: string, v: any) => {
+                if (!initialValue.has(k)) {
+                  throw new Error(`@Local(key) missing key ${k}`);
+                }
+                const storeKey = `${key}:${k}`;
+                if (v === null || JSON.stringify(v) === JSON.stringify(initialValue.get(k))) {
+                  // todo? Reset to initial value
+                  window.localStorage.removeItem(storeKey);
+                } else {
+                  window.localStorage.setItem(storeKey, JSON.stringify(v));
+                }
+              };
+            default:
+              throw new Error(`@Local(key) supported method ${prop}`);
           }
         }
       });
-      return function (this: any, initialValue: any) {
-        this[symbol] = initialValue;
-      };
-    });
-
+    };
   };
 }
 
