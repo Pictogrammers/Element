@@ -105,7 +105,7 @@ export function Component(config: CustomElementConfig = {}) {
         // } else if (this[init] && config.template) {
         // This is allowed now via <parent/>
         // throw new Error('template from base class cannot be overriden. Fix: remove template from @Component');
-      } else if (this[init] && !config.template) {
+      } else if (this[init] && config.selector && !config.template) {
         throw new Error('You need to pass a template for an extended element.');
       }
 
@@ -205,7 +205,7 @@ function getSymbolType(value: any) {
   return isArray(value) ? 'array' : typeof value;
 }
 
-const arrayRender = ['pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'with'];
+const arrayRender = ['fill', 'pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'unshift', 'with'];
 const arrayRead = ['forEach', 'map'];
 
 export function Prop(normalize?: (value: any) => any): any {
@@ -225,18 +225,21 @@ export function Prop(normalize?: (value: any) => any): any {
               if (key === meta) {
                 return this[symbolMeta];
               }
-              if (this[symbolMeta]
-                && arrayRender.includes(key)
+              if (arrayRender.includes(key)
                 && typeof target[key] === 'function') {
                 // @ts-ignore
                 const self = this;
                 return (...args: any) => {
                   const result = target[key](...args);
                   bindForEach(target);
-                  renderForEach(target, self[symbolMeta]);
-                  self[symbolMeta].forEach(({ host }: any) => {
-                    render(host, propertyKey);
-                  });
+                  if (this[symbolMeta]) {
+                    renderForEach(target, self[symbolMeta]);
+                    self[symbolMeta].forEach(({ host }: any) => {
+                      render(host, propertyKey);
+                    });
+                  } else {
+                    render(this, propertyKey);
+                  }
                   return result;
                 };
               }
