@@ -58,6 +58,12 @@ export function Component(config: CustomElementConfig = {}) {
     if (context.kind !== 'class') {
       throw new Error('@Component() can only decorate a class');
     }
+    // webpack removes class names, override name
+    Reflect.defineProperty(cls, 'name', {
+      value: config.selector,
+      writable: false,
+      configurable: false,
+    });
     if (cls.prototype[parent]) {
       cls.prototype[parent].push(cls.prototype);
       cls.prototype[style].push(config.style);
@@ -605,6 +611,7 @@ function bindForEach(value: any[]) {
       v.key ??= uuid();
       const symbol = Symbol(`${v.key}`);
       const symbolMeta = Symbol(`${v.key}:meta`);
+      v.index = i;
       // @ts-ignore
       value[symbol] = v;
       // @ts-ignore
@@ -636,6 +643,8 @@ function bindForEach(value: any[]) {
           return prop in o;
         }
       }));
+    } else {
+      v.index = i;
     }
   });
 }
