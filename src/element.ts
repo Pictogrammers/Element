@@ -64,14 +64,14 @@ export function Component(config: CustomElementConfig = {}) {
       writable: false,
       configurable: false,
     });
-    if (cls.prototype[parent]) {
+    if (cls.prototype[parent] && !(cls.prototype[parent][cls.prototype[parent].length - 1] instanceof Object.getPrototypeOf(cls))) {
       cls.prototype[parent].push(cls.prototype);
       cls.prototype[style].push(config.style);
       cls.prototype[template] = extendTemplate(
         cls.prototype[template],
         config.template || null
       );
-    } else {
+    } else if (cls.prototype instanceof HTMLElement) {
       cls.prototype[parent] = [cls.prototype];
       cls.prototype[style] = config.style ? [config.style] : [];
       cls.prototype[template] = config.template || '';
