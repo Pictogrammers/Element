@@ -7,7 +7,6 @@ type RemoveObserver = (host: HTMLElement) => void;
 
 const arrayRender = ['fill', 'pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'unshift', 'with'];
 const arrayRead = ['forEach', 'some', 'map', 'indexOf', 'lastIndexOf'];
-[].reverse();
 
 // key = obj, value = Map<ele, callback[]>
 const observers = new Map();
