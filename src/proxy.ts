@@ -44,21 +44,6 @@ type RecursiveProxy<T> = IsAny<T> extends true
       : T[P]
   } & Extras;
 
-/*
-
-{
-  //get<K extends string>(key: K): RecursiveProxy<any>;
-  push(...items: T & object[]): number;
-  fill(
-    value: T extends (infer U)[] ? U : object,
-    start?: number,
-    end?: number
-  ): void;
-  [addObserver]: AddObserver;
-  [removeObserver]: RemoveObserver;
-} & 
- */
-
 let trigger: any = null;
 
 export function createProxy<T>(obj: T): RecursiveProxy<T> {
