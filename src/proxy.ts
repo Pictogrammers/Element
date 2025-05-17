@@ -6,7 +6,8 @@ type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
 type RemoveObserver = (host: HTMLElement) => void;
 
 const arrayRender = ['fill', 'pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'unshift', 'with'];
-const arrayRead = ['forEach', 'map'];
+const arrayRead = ['forEach', 'some', 'map', 'indexOf', 'lastIndexOf'];
+[].reverse();
 
 // key = obj, value = Map<ele, callback[]>
 const observers = new Map();
@@ -14,15 +15,9 @@ const observers = new Map();
 type IsAny<T> = unknown extends T & string ? true : false;
 
 type ExtrasArray<T> = {
-  push(...items: T & object[]): number;
-  fill(
-    value: T extends (infer U)[] ? U : object,
-    start?: number,
-    end?: number
-  ): void;
   [addObserver]: AddObserver;
   [removeObserver]: RemoveObserver;
-};
+} & Array<T extends (infer U)[] ? Partial<U> : object>;
 
 type Extras = {
   [addObserver]: AddObserver;
