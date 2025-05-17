@@ -79,13 +79,14 @@ describe("createProxy", () => {
     expect(observer).not.toBeCalled();
   });
 
-  test.only("addObserver object", () => {
+  test("addObserver object", () => {
     const items = [{
       label: 'Item 1',
       value: 'item1'
     }];
     const proxy = createProxy(items);
     const observer = jest.fn();
+    proxy.push({ label: 'test', value: '' })
     proxy[0][addObserver](ele, observer);
     proxy[0].label = 'new';
     expect(observer).toBeCalledTimes(1);
@@ -104,4 +105,20 @@ describe("createProxy", () => {
     proxy[0].label = 'new';
     expect(observer).not.toBeCalled();
   });
+});
+
+describe("createProxy nested object", () => {
+
+  test("addObserver nested object updates", () => {
+    const items = {
+      nestedObj: {
+        value: 'bar'
+      }
+    };
+    const proxy = createProxy(items);
+    const observer = jest.fn();
+    proxy[addObserver](ele, observer);
+    proxy.nestedObj = { value: 'new' };
+  });
+
 });

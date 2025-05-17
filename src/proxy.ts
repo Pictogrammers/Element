@@ -11,7 +11,42 @@ const arrayRead = ['forEach', 'map'];
 // key = obj, value = Map<ele, callback[]>
 const observers = new Map();
 
-type RecursiveProxy<T> = {
+type IsAny<T> = unknown extends T & string ? true : false;
+
+type ExtrasArray<T> = {
+  push(...items: T & object[]): number;
+  fill(
+    value: T extends (infer U)[] ? U : object,
+    start?: number,
+    end?: number
+  ): void;
+  [addObserver]: AddObserver;
+  [removeObserver]: RemoveObserver;
+};
+
+type Extras = {
+  [addObserver]: AddObserver;
+  [removeObserver]: RemoveObserver;
+};
+
+// Short-circuit any or this is infinite
+type RecursiveProxy<T> = IsAny<T> extends true
+? any 
+: T extends Array<any>
+  ? ExtrasArray<T> & {
+    [P in keyof T]: IsAny<T[P]> extends true ? any : RecursiveProxy<T[P]>
+  }
+  : {
+    [P in keyof T]: IsAny<T[P]> extends true
+    ? any
+    : T[P] extends Array<any>
+      ? RecursiveProxy<T[P]>
+      : T[P]
+  } & Extras;
+
+/*
+
+{
   //get<K extends string>(key: K): RecursiveProxy<any>;
   push(...items: T & object[]): number;
   fill(
@@ -21,9 +56,8 @@ type RecursiveProxy<T> = {
   ): void;
   [addObserver]: AddObserver;
   [removeObserver]: RemoveObserver;
-} & {
-  [P in keyof T]: T[P] extends object ? RecursiveProxy<T[P]> : T[P];
-};
+} & 
+ */
 
 let trigger: any = null;
 
