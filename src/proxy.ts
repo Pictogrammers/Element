@@ -38,8 +38,6 @@ type RecursiveProxy<T> = IsAny<T> extends true
       : T[P]
   } & Extras;
 
-let trigger: any = null;
-
 export function createProxy<T>(obj: T): RecursiveProxy<T> {
   return new Proxy(obj as any, {
     get(target: any, prop: string | symbol): any {
@@ -67,19 +65,30 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
             }
           };
         }
-        throw new Error('test');
+        if (prop === Symbol.toPrimitive || Symbol.toStringTag) {
+          return Reflect.get(target, prop);
+        }
+        throw new Error('Unsupported symbol');
       }
       if (prop in target) {
         if (!Number.isNaN(Number(prop))) {
-          console.log(prop, 'array!!!');
-          return createProxy(target);
+          return createProxy(target[prop]);
         }
         if (arrayRender.includes(prop)) {
           if (observers.has(target)) {
-            trigger = prop;
+            return () => {
+              const result = Array.prototype[prop as any].apply(target, arguments);
+              const map = observers.get(target);
+              map.forEach((callbacks: any, host: HTMLElement) => {
+                callbacks.forEach((callback: any) =>  {
+                  callback();
+                });
+              });
+              return result;
+            }
           }
         }
-        return target[prop];
+        return Reflect.get(target, prop); // target[prop];
       }
       console.log(prop, '+++');
       return createProxy(target);
@@ -88,32 +97,19 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
       if (typeof prop === 'symbol') {
         throw new Error('Setting symbols not allowed.');
       }
-      console.log(Array.isArray(target), prop, target);
       if (Array.isArray(target)) {
-        console.log(trigger, prop, '<---');
-        if ((trigger === 'push' && prop === 'length')
-          || (trigger === 'pop' && prop === 'length')) {
-          const map = observers.get(target);
-          map.forEach((callbacks: any, host: HTMLElement) => {
-            callbacks.forEach((callback: any) =>  {
-              callback();
-            });
-          });
-          console.log(prop, 'SET Array!');
-        }
-      } else {
-        if (observers.has(target)) {
-          const map = observers.get(target);
-          map.forEach((callbacks: any, host: HTMLElement) => {
-            callbacks.forEach((callback: any) =>  {
-              callback(prop, value);
-            });
-          });
-        }
-        console.log(prop, 'SET Object!');
+        console.log('array already handled');
+        return Reflect.set(target, prop, value);
       }
-      Reflect.set(target, prop, value);
-      return true;
+      if (observers.has(target)) {
+        const map = observers.get(target);
+        map.forEach((callbacks: any, host: HTMLElement) => {
+          callbacks.forEach((callback: any) =>  {
+            callback(prop, value);
+          });
+        });
+      }
+      return Reflect.set(target, prop, value);
     }
   });
 }

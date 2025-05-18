@@ -48,7 +48,7 @@ describe("createProxy", () => {
     const observer = jest.fn();
     proxy[addObserver](ele, observer);
     proxy.reverse();
-    expect(proxy.length).toBe(0);
+    expect(proxy.length).toBe(2);
     expect(observer).toBeCalledTimes(1);
     expect(observer).toBeCalledWith();
   });
@@ -86,7 +86,6 @@ describe("createProxy", () => {
     }];
     const proxy = createProxy(items);
     const observer = jest.fn();
-    proxy.push({ label: 'test', value: '' })
     proxy[0][addObserver](ele, observer);
     proxy[0].label = 'new';
     expect(observer).toBeCalledTimes(1);
