@@ -20,6 +20,20 @@ describe("createProxy", () => {
     expect(observer).toBeCalledWith();
   });
 
+  test("addObserver array pop", () => {
+    const items = [{
+      label: 'Item 1',
+      value: 'item1'
+    }];
+    const proxy = createProxy(items);
+    const observer = jest.fn();
+    proxy[addObserver](ele, observer);
+    proxy.pop();
+    expect(proxy.length).toBe(0);
+    expect(observer).toBeCalledTimes(1);
+    expect(observer).toBeCalledWith();
+  });
+
   test("addObserver array push", () => {
     const items = [{
       label: 'Item 1',
@@ -49,6 +63,23 @@ describe("createProxy", () => {
     proxy[addObserver](ele, observer);
     proxy.reverse();
     expect(proxy.length).toBe(2);
+    expect(observer).toBeCalledTimes(1);
+    expect(observer).toBeCalledWith();
+  });
+
+  test("addObserver array shift", () => {
+    const items = [{
+      label: 'Item 1',
+      value: 'item1'
+    }, {
+      label: 'Item 2',
+      value: 'item2'
+    }];
+    const proxy = createProxy(items);
+    const observer = jest.fn();
+    proxy[addObserver](ele, observer);
+    proxy.shift();
+    expect(proxy.length).toBe(1);
     expect(observer).toBeCalledTimes(1);
     expect(observer).toBeCalledWith();
   });

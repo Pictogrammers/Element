@@ -88,7 +88,7 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
             }
           }
         }
-        return Reflect.get(target, prop); // target[prop];
+        return Reflect.get(target, prop);
       }
       console.log(prop, '+++');
       return createProxy(target);
