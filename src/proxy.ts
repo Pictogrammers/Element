@@ -5,8 +5,8 @@ type AddObserverCallback = (key?: string) => void;
 type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
 type RemoveObserver = (host: HTMLElement) => void;
 
-const arrayRender = ['fill', 'pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'unshift', 'with'];
-const arrayRead = ['forEach', 'some', 'map', 'indexOf', 'lastIndexOf'];
+const arrayMutate = ['fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift', 'with'];
+const arrayRead = ['forEach', 'slice', 'some', 'map', 'indexOf', 'lastIndexOf'];
 
 // key = obj, value = Map<ele, callback[]>
 const observers = new Map();
@@ -74,7 +74,7 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         if (!Number.isNaN(Number(prop))) {
           return createProxy(target[prop]);
         }
-        if (arrayRender.includes(prop)) {
+        if (arrayMutate.includes(prop)) {
           if (observers.has(target)) {
             return () => {
               const result = Array.prototype[prop as any].apply(target, arguments);
@@ -90,7 +90,6 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         }
         return Reflect.get(target, prop);
       }
-      console.log(prop, '+++');
       return createProxy(target);
     },
     set(target: any, prop: string | symbol, value): boolean {
@@ -98,7 +97,6 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         throw new Error('Setting symbols not allowed.');
       }
       if (Array.isArray(target)) {
-        console.log('array already handled');
         return Reflect.set(target, prop, value);
       }
       if (observers.has(target)) {

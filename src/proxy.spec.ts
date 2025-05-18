@@ -84,6 +84,23 @@ describe("createProxy", () => {
     expect(observer).toBeCalledWith();
   });
 
+  test("addObserver array slice", () => {
+    const items = [{
+      label: 'Item 1',
+      value: 'item1'
+    }, {
+      label: 'Item 2',
+      value: 'item2'
+    }];
+    const proxy = createProxy(items);
+    const observer = jest.fn();
+    proxy[addObserver](ele, observer);
+    const segment = proxy.slice(1, 2);
+    expect(proxy.length).toBe(2);
+    expect(segment.length).toBe(1);
+    expect(observer).toBeCalledTimes(0);
+  });
+
   test("removeObserver array push", () => {
     const items = [{
       label: 'Item 1',
