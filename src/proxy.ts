@@ -5,8 +5,8 @@ type AddObserverCallback = (key?: string) => void;
 type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
 type RemoveObserver = (host: HTMLElement) => void;
 
-const arrayMutate = ['fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift', 'with'];
-const arrayRead = ['forEach', 'slice', 'some', 'map', 'indexOf', 'lastIndexOf'];
+const arrayMutate = ['fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
+const arrayRead = ['forEach', 'slice', 'some', 'map', 'indexOf', 'lastIndexOf', 'width'];
 
 // key = obj, value = Map<ele, callback[]>
 const observers = new Map();
@@ -74,6 +74,9 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         if (!Number.isNaN(Number(prop))) {
           return createProxy(target[prop]);
         }
+        if (prop === 'copyWithin') {
+          throw new Error('Unsupported array method copyWithin');
+        }
         if (arrayMutate.includes(prop)) {
           if (observers.has(target)) {
             return () => {
@@ -81,7 +84,7 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
               const map = observers.get(target);
               map.forEach((callbacks: any, host: HTMLElement) => {
                 callbacks.forEach((callback: any) =>  {
-                  callback();
+                  callback(target, prop, arguments);
                 });
               });
               return result;
@@ -111,3 +114,14 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
     }
   });
 }
+
+export const Mutation = {
+  fill: 'fill',
+  pop: 'pop',
+  push: 'push',
+  reverse: 'reverse',
+  shift: 'shift',
+  sort: 'sort',
+  splice: 'splice',
+  unshift: 'unshift'
+};

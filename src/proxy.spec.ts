@@ -17,7 +17,7 @@ describe("createProxy", () => {
       { label: 'Item 2', value: 'item2' }
     );
     expect(observer).toBeCalledTimes(1);
-    expect(observer).toBeCalledWith();
+    expect(observer.mock.calls[0][1]).toBe('fill');
   });
 
   test("addObserver array pop", () => {
@@ -31,7 +31,7 @@ describe("createProxy", () => {
     proxy.pop();
     expect(proxy.length).toBe(0);
     expect(observer).toBeCalledTimes(1);
-    expect(observer).toBeCalledWith();
+    expect(observer.mock.calls[0][1]).toBe('pop');
   });
 
   test("addObserver array push", () => {
@@ -47,7 +47,7 @@ describe("createProxy", () => {
       { label: 'Item 3', value: 'item3' }
     );
     expect(observer).toBeCalledTimes(1);
-    expect(observer).toBeCalledWith();
+    expect(observer.mock.calls[0][1]).toBe('push');
   });
 
   test("addObserver array reverse", () => {
@@ -64,7 +64,7 @@ describe("createProxy", () => {
     proxy.reverse();
     expect(proxy.length).toBe(2);
     expect(observer).toBeCalledTimes(1);
-    expect(observer).toBeCalledWith();
+    expect(observer.mock.calls[0][1]).toBe('reverse');
   });
 
   test("addObserver array shift", () => {
@@ -81,7 +81,7 @@ describe("createProxy", () => {
     proxy.shift();
     expect(proxy.length).toBe(1);
     expect(observer).toBeCalledTimes(1);
-    expect(observer).toBeCalledWith();
+    expect(observer.mock.calls[0][1]).toBe('shift');
   });
 
   test("addObserver array slice", () => {
@@ -99,19 +99,6 @@ describe("createProxy", () => {
     expect(proxy.length).toBe(2);
     expect(segment.length).toBe(1);
     expect(observer).toBeCalledTimes(0);
-  });
-
-  test("removeObserver array push", () => {
-    const items = [{
-      label: 'Item 1',
-      value: 'item1'
-    }];
-    const proxy = createProxy(items);
-    const observer = jest.fn();
-    proxy[addObserver](ele, observer);
-    proxy[removeObserver](ele);
-    proxy.push({ label: 'Item 2', value: 'item2' });
-    expect(observer).not.toBeCalled();
   });
 
   test("removeObserver array push", () => {

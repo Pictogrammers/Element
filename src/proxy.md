@@ -29,31 +29,39 @@ Array observers will trigger when items are inserted, removed, or position chang
 > For performance reasons `sort` and `reverse` are handled as a single change.
 
 ```typescript
+import { Mutation } from './proxy';
+
 const foo = [{
     name: 'init'
 }];
 const proxyFoo = createProxy(foo);
-proxyFoo[addObserver](ele, (updates) => {
-    updates.forEach((update) => {
-        console.log(update.type, update.index, update.item);
-        switch(update.type) {
-            case UpdateType.insert:
-                // 
-                break;
-            case UpdateType.move:
+proxyFoo[addObserver](ele, (target, prop, args) => {
+    switch(prop) {
+        case Mutation.fill:
+            
+            break;
+        case Mutation.pop:
 
-                break;
-            case UpdateType.delete:
-                
-                break;
-            case UpdateType.reverse:
+            break;
+        case Mutation.push:
+            
+            break;
+        case Mutation.reverse:
 
-                break;
-            case UpdateType.sort:
+            break;
+        case Mutation.shift:
 
-                break;
-        }
-    });
+            break;
+        case Mutation.sort:
+
+            break;
+        case Mutation.splice:
+
+            break;
+        case Mutation.unshift:
+
+            break;
+    }
 });
 foo.push({ name: 'new item' });
 // 'insert', 1, { name: 'new item' }
