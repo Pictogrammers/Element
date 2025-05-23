@@ -1,4 +1,10 @@
 import './global';
+import {
+  Mutation,
+  createProxy,
+  addObserver,
+  removeObserver
+} from './proxy';
 
 interface CustomElementConfig {
   selector?: string;
@@ -223,9 +229,14 @@ export function Prop(normalize?: (value: any) => any): any {
     context.addInitializer(function (this: any) {
       Reflect.defineProperty(this, propertyKey, {
         get: () => {
-          if (this[symbolType] !== 'array') {
-            return this[symbol];
+          console.log('hmm ->');
+          if (this[symbolType] === 'object') {
+            return createProxy(this[symbol]);
           }
+          if (this[symbolType] === 'array') {
+            return createProxy(this[symbol]);
+          }
+          return this[symbol];
           return new Proxy(this[symbol], {
             get: (target: any, key: any) => {
               if (key === meta) {
@@ -248,8 +259,7 @@ export function Prop(normalize?: (value: any) => any): any {
                   }
                   return result;
                 };
-              }
-              else if (arrayRead.includes(key)) {
+              } else if (arrayRead.includes(key)) {
                 return (...args: any) => {
                   return target[key](...args);
                 };
@@ -506,13 +516,12 @@ export type Changes = {
 }
 
 const trackProxy = Symbol('hasProxy');
-function hasProxy(obj: object) {
-  if (obj === null || typeof obj != "object") return false;
-  return trackProxy in obj;
+function hasProxy(obj: any) {
+  if (obj === null || typeof obj !== "object") return false;
+  return obj[trackProxy];
 }
 
 const meta = Symbol('meta');
-const bind = Symbol('bind');
 
 interface ArrayWithMetaAndBind extends Array<any> {
   [key: number]: any;
@@ -521,7 +530,7 @@ interface ArrayWithMetaAndBind extends Array<any> {
 
 type ForEach = {
   container: HTMLElement;
-  items: ArrayWithMetaAndBind;
+  items: any;
   type: (item: any) => any;
   create?: ($item: HTMLElement, item: any) => void;
   update?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
@@ -530,13 +539,64 @@ type ForEach = {
 }
 
 export function forEach({ container, items, type, create, connect, disconnect, update }: ForEach) {
-  const { host } = container.getRootNode() as any as { host: HTMLElement };
+  //const { host } = container.getRootNode() as any as { host: HTMLElement };
+  items[addObserver](container, (target: any, prop: any, args: any[]) => {
+    switch(prop) {
+      case Mutation.fill:
+
+        break;
+      case Mutation.pop:
+
+        break;
+      case Mutation.push:
+        [...args].forEach((item: any, i) => {
+          const comp = type(item);
+          const $new = document.createElement(camelToDash(comp.name), comp);
+          const { observedAttributes } = comp;
+          if (!observedAttributes.includes('index')) {
+            item.index = target.length + i - 1;
+          }
+          observedAttributes.forEach((attr: string) => {
+            if (item.hasOwnProperty(attr)) {
+              //@ts-ignore
+              $new[attr] = item[attr];
+            }
+          });
+          /*create && create($new, options);
+          if (previous) {
+            existing.get(previous).after($new);
+          } else {
+            c.prepend($new);
+          }
+          connect && connect($new, options, c.children);
+          existing.set(`${option.key}`, $new);*/
+          container.appendChild($new);
+        });
+        break;
+      case Mutation.reverse:
+
+        break;
+      case Mutation.shift:
+
+        break;
+      case Mutation.sort:
+
+        break;
+      case Mutation.splice:
+
+        break;
+      case Mutation.unshift:
+
+        break;
+    }
+  });
+  /*const { host } = container.getRootNode() as any as { host: HTMLElement };
   items[meta] ??= new Map<HTMLElement, any>();
   items[meta].set(container, { host, type, create, connect, disconnect, update });
   // already attached, so init
   if (items.length) {
     renderForEach(items);
-  }
+  }*/
 }
 
 function renderForEach(items: ArrayWithMetaAndBind, privateMeta?: Map<HTMLElement, any>) {
@@ -622,8 +682,26 @@ function bindForEach(value: any[]) {
             // @ts-ignore
             return value[symbolMeta];
           }
+          // reflect define property items/array -> proxy
           // @ts-ignore
-          return value[symbol][prop];
+          if (value[symbol][prop] instanceof Array) {
+            // @ts-ignore
+            if (!hasProxy(target[prop])) {
+              console.log('replace');
+              // Replace once
+              target[prop] = new Proxy(target[prop], {
+                  get(subTarget, subProp) {
+                      if (subProp === trackProxy) {
+                          return true;
+                      }
+                      // handle array modifiers
+                      return Reflect.get(subTarget, subProp);
+                  }
+              });
+            }
+          }
+          // @ts-ignore
+          return Reflect.get(value[symbol], prop);
         },
         set: function (target, prop, val) {
           if (prop === meta) {

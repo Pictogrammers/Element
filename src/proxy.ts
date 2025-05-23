@@ -44,23 +44,23 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
       if (typeof prop === 'symbol') {
         if (prop === addObserver) {
           return (host: HTMLElement, callback: AddObserverCallback) => {
-            if (observers.has(target)) {
-              if (observers.get(target).has(host)) {
-                observers.get(target).get(host).push(callback);
+            if (observers.has(obj)) {
+              if (observers.get(obj).has(host)) {
+                observers.get(obj).get(host).push(callback);
               } else {
-                observers.get(target).set(host, [callback]);
+                observers.get(obj).set(host, [callback]);
               }
             } else {
-              observers.set(target, new Map([[host, [callback]]]));
+              observers.set(obj, new Map([[host, [callback]]]));
             }
           };
         }
         if (prop === removeObserver) {
           return (host: HTMLElement) => {
-            if (observers.has(target)) {
-              observers.get(target).delete(host);
-              if (observers.get(target).size === 0) {
-                observers.delete(target);
+            if (observers.has(obj)) {
+              observers.get(obj).delete(host);
+              if (observers.get(obj).size === 0) {
+                observers.delete(obj);
               }
             }
           };
@@ -79,17 +79,17 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         }
         if (arrayMutate.includes(prop)) {
           if (observers.has(target)) {
-            return () => {
-              const result = Array.prototype[prop as any].apply(target, arguments);
+            return function() {
               const map = observers.get(target);
               map.forEach((callbacks: any, host: HTMLElement) => {
                 callbacks.forEach((callback: any) =>  {
                   callback(target, prop, arguments);
                 });
               });
-              return result;
+              return Array.prototype[prop as any].apply(target, arguments);
             }
           }
+          return Reflect.get(target, prop);
         }
         return Reflect.get(target, prop);
       }
