@@ -31,6 +31,7 @@ class PropError extends Error {
   }
 }
 
+export const index = Symbol('index');
 const init = Symbol('init');
 const template = Symbol('template');
 const style = Symbol('style');
@@ -229,7 +230,7 @@ export function Prop(normalize?: (value: any) => any): any {
     context.addInitializer(function (this: any) {
       Reflect.defineProperty(this, propertyKey, {
         get: () => {
-          console.log('hmm ->');
+          console.log('hmm ->', propertyKey);
           if (this[symbolType] === 'object') {
             return createProxy(this[symbol]);
           }
@@ -538,7 +539,44 @@ type ForEach = {
   disconnect?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
 }
 
+function intersect(arr1: string[], arr2: string[]) {
+  const set1 = new Set(arr1);
+  return arr2.filter(item => set1.has(item));
+}
+
 export function forEach({ container, items, type, create, connect, disconnect, update }: ForEach) {
+  function newItem(item: any, itemIndex: number) {
+    const comp = type(item);
+    const $new = document.createElement(camelToDash(comp.name), comp);
+    const { observedAttributes } = comp;
+    const props = intersect(Object.keys(item), observedAttributes);
+    if (observedAttributes.includes('index')) {
+      //@ts-ignore
+      $new['index'] = itemIndex;
+    }
+    let idx = props.indexOf('index');
+    if (idx !== -1) {
+      props.splice(props.indexOf('index'), 1);
+    }
+    props.forEach((attr: string) => {
+      //@ts-ignore
+      $new[attr] = item[attr];
+    });
+    /*create && create($new, options);
+    if (previous) {
+      existing.get(previous).after($new);
+    } else {
+      c.prepend($new);
+    }
+    connect && connect($new, options, c.children);
+    existing.set(`${option.key}`, $new);*/
+    return $new;
+  }
+  // Add initial items
+  items.forEach((item: any, i: number) => {
+    container.appendChild(newItem(item, i));
+  });
+  // Listen for changes
   //const { host } = container.getRootNode() as any as { host: HTMLElement };
   items[addObserver](container, (target: any, prop: any, args: any[]) => {
     switch(prop) {
@@ -550,27 +588,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         break;
       case Mutation.push:
         [...args].forEach((item: any, i) => {
-          const comp = type(item);
-          const $new = document.createElement(camelToDash(comp.name), comp);
-          const { observedAttributes } = comp;
-          if (!observedAttributes.includes('index')) {
-            item.index = target.length + i - 1;
-          }
-          observedAttributes.forEach((attr: string) => {
-            if (item.hasOwnProperty(attr)) {
-              //@ts-ignore
-              $new[attr] = item[attr];
-            }
-          });
-          /*create && create($new, options);
-          if (previous) {
-            existing.get(previous).after($new);
-          } else {
-            c.prepend($new);
-          }
-          connect && connect($new, options, c.children);
-          existing.set(`${option.key}`, $new);*/
-          container.appendChild($new);
+          container.appendChild(newItem(item, items.length + i));
         });
         break;
       case Mutation.reverse:
@@ -583,7 +601,29 @@ export function forEach({ container, items, type, create, connect, disconnect, u
 
         break;
       case Mutation.splice:
-
+        console.log('splice!!!', args);
+        const [startIndex, deleteCount, newItems] = args;
+        if (deleteCount > 0) {
+          for (let i = startIndex; i < deleteCount + startIndex; i++) {
+            container.children[i].remove();
+          }
+        }
+        let newCount = newItems?.length || 0;
+        if (newCount > 0) {
+          container.children[startIndex].after(
+            newItems.map((item: any, i: number) => {
+              return newItem(item, startIndex + i)
+            })
+          );
+        }
+        const shift = deleteCount - newCount;
+        if (shift !== 0) {
+          // update index values after
+          for (let i = startIndex + shift - 1; i < container.children.length; i++) {
+            // @ts-ignore
+            container.children[i].index = i;
+          }
+        }
         break;
       case Mutation.unshift:
 

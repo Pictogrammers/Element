@@ -102,9 +102,9 @@ set selected(value: string | boolean) {
 
 ### Template Loops
 
-Components can create repeated lists of other components by using the `forEach` utility. A unique `key` property is required in each item of the items array (defaults to a uuid if not provided). Any updates will sync values to the component provided in the type function.
+Components can create repeated lists of other components by using the `forEach` utility. Any updates will sync values to the component provided in the type function.
 
-> **Note:** `item` in the callbacks is readonly and contains `index`.
+> **Note:** `item` will automatically be added to 
 
 ```typescript
 import { forEach } from '@pictogrammers/element';
@@ -122,21 +122,27 @@ import UiItem from 'ui/item';
     forEach({
       container: this.$items,
       items: this.options,
-      type: (item) => {
+      type(item) {
         return UiItem;
       },
-      create: ($item, item) => {
+      create($item, item) {
         // after creation of $item element
       },
-      connect: ($item, item, $items) => {
+      connect($item, item, $items) {
         // after connectedCallback
       },
-      disconnect: ($item, item, $items) => {
+      disconnect($item, item, $items) {
         // before disconnectedCallback
       },
-      update: ($item, item, $items) => {
+      update($item, item, $items) {
         // after every $item update
       },
+      minIndex(items) {
+        return 0; // start range to monitor node changes
+      },
+      maxIndex(items) {
+        return items.length; // end range to monitor node changes
+      }
     });
   }
 ```
@@ -187,7 +193,7 @@ export default class HelloWorldButton extends HelloWorld {
 
 ```html
 <button part="button">
-  <parent/> <!-- <div>Default!</div> -->
+  <parent /> <!-- <div>Default!</div> -->
 </button>
 ```
 
@@ -222,7 +228,7 @@ this.store.set('toggle' true);
 
 ## Development
 
-```
+```bash
 # Build
 npm run build
 # View files in dist/
@@ -230,6 +236,18 @@ npm run build
 npm link
 # Within a local project directory
 npm link @pictogrammers/element
+```
+
+After making changes run build.
+
+```bash
+npm run build
+```
+
+Always run tests before submitting any updates.
+
+```bash
+npm test
 ```
 
 ## Utility Base Class
