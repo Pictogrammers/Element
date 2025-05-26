@@ -570,6 +570,10 @@ export function forEach({ container, items, type, create, connect, disconnect, u
     }
     connect && connect($new, options, c.children);
     existing.set(`${option.key}`, $new);*/
+    items[itemIndex][addObserver]($new, (prop: string, value: string) => {
+      // @ts-ignore
+      $new[prop] = value;
+    });
     return $new;
   }
   // Add initial items
