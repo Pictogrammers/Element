@@ -238,43 +238,6 @@ export function Prop(normalize?: (value: any) => any): any {
             return createProxy(this[symbol]);
           }
           return this[symbol];
-          return new Proxy(this[symbol], {
-            get: (target: any, key: any) => {
-              if (key === meta) {
-                return this[symbolMeta];
-              }
-              if (arrayRender.includes(key)
-                && typeof target[key] === 'function') {
-                // @ts-ignore
-                const self = this;
-                return (...args: any) => {
-                  const result = target[key](...args);
-                  bindForEach(target);
-                  if (this[symbolMeta]) {
-                    renderForEach(target, self[symbolMeta]);
-                    self[symbolMeta].forEach(({ host }: any) => {
-                      render(host, propertyKey);
-                    });
-                  } else {
-                    render(this, propertyKey);
-                  }
-                  return result;
-                };
-              } else if (arrayRead.includes(key)) {
-                return (...args: any) => {
-                  return target[key](...args);
-                };
-              }
-              return Reflect.get(this[symbol], key);
-            },
-            set: (target, key, v) => {
-              if (key === meta) {
-                this[symbolMeta] = v;
-                return true;
-              }
-              return Reflect.set(target, key, v);
-            }
-          });
         },
         set: (value) => {
           // ToDo: cleanup
@@ -329,17 +292,20 @@ export function Prop(normalize?: (value: any) => any): any {
       if (initialValue === true) {
         throw new Error(`@Prop() ${propertyKey} boolean must initialize to false.`);
       }
-      // Web Component
+      // Web Component, todo: refactor to only be called once
       if (!context.private) {
         const { constructor } = this as any;
+        console.log('symbols', constructor.symbols);
         constructor.observedAttributes ??= [];
         if (!constructor.symbols) {
           constructor.symbols = {};
         }
         const { symbols } = constructor;
         const normalizedPropertyKey = camelToDash(propertyKey);
-        constructor.observedAttributes.push(normalizedPropertyKey);
-        symbols[propertyKey] = symbol;
+        if (!symbols[propertyKey]) {
+          constructor.observedAttributes.push(normalizedPropertyKey);
+          symbols[propertyKey] = symbol;
+        }
       }
       // Rest
       this[symbolType] = getSymbolType(initialValue);
@@ -544,6 +510,10 @@ function intersect(arr1: string[], arr2: string[]) {
   return arr2.filter(item => set1.has(item));
 }
 
+function difference(arr1: string[], arr2: string[]) {
+  return arr1.filter(element => !arr2.includes(element));
+}
+
 export function forEach({ container, items, type, create, connect, disconnect, update }: ForEach) {
   function newItem(item: any, itemIndex: number) {
     const comp = type(item);
@@ -580,12 +550,15 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   items.forEach((item: any, i: number) => {
     container.appendChild(newItem(item, i));
   });
-  // Listen for changes
-  //const { host } = container.getRootNode() as any as { host: HTMLElement };
+  // Handle each mutation
   items[addObserver](container, (target: any, prop: any, args: any[]) => {
     switch(prop) {
       case Mutation.fill:
-
+        const [value, start, end] = args;
+        //const diff = difference(Object.keys(item), );
+        for (let i = start || 0; i < end || items.length; i++) {
+          Object.keys(items).forEach(key => delete items[items]);
+        }
         break;
       case Mutation.pop:
 
@@ -605,7 +578,6 @@ export function forEach({ container, items, type, create, connect, disconnect, u
 
         break;
       case Mutation.splice:
-        console.log('splice!!!', args);
         const [startIndex, deleteCount, newItems] = args;
         if (deleteCount > 0) {
           for (let i = startIndex; i < deleteCount + startIndex; i++) {
@@ -634,13 +606,6 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         break;
     }
   });
-  /*const { host } = container.getRootNode() as any as { host: HTMLElement };
-  items[meta] ??= new Map<HTMLElement, any>();
-  items[meta].set(container, { host, type, create, connect, disconnect, update });
-  // already attached, so init
-  if (items.length) {
-    renderForEach(items);
-  }*/
 }
 
 function renderForEach(items: ArrayWithMetaAndBind, privateMeta?: Map<HTMLElement, any>) {
