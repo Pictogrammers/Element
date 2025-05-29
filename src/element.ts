@@ -230,7 +230,6 @@ export function Prop(normalize?: (value: any) => any): any {
     context.addInitializer(function (this: any) {
       Reflect.defineProperty(this, propertyKey, {
         get: () => {
-          console.log('hmm ->', propertyKey);
           if (this[symbolType] === 'object') {
             return createProxy(this[symbol]);
           }
@@ -295,7 +294,6 @@ export function Prop(normalize?: (value: any) => any): any {
       // Web Component, todo: refactor to only be called once
       if (!context.private) {
         const { constructor } = this as any;
-        console.log('symbols', constructor.symbols);
         constructor.observedAttributes ??= [];
         if (!constructor.symbols) {
           constructor.symbols = {};
@@ -564,8 +562,9 @@ export function forEach({ container, items, type, create, connect, disconnect, u
 
         break;
       case Mutation.push:
+        const first = container.children.length;
         [...args].forEach((item: any, i) => {
-          container.appendChild(newItem(item, items.length + i));
+          container.appendChild(newItem(item, first + i));
         });
         break;
       case Mutation.reverse:

@@ -80,20 +80,21 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         if (arrayMutate.includes(prop)) {
           if (observers.has(target)) {
             return function() {
+              const result = Array.prototype[prop as any].apply(target, arguments);
               const map = observers.get(target);
               map.forEach((callbacks: any, host: HTMLElement) => {
                 callbacks.forEach((callback: any) =>  {
                   callback(target, prop, arguments);
                 });
               });
-              return Array.prototype[prop as any].apply(target, arguments);
+              return result;
             }
           }
           return Reflect.get(target, prop);
         }
         return Reflect.get(target, prop);
       }
-      return createProxy(target);
+      return Reflect.get(target, prop);
     },
     set(target: any, prop: string | symbol, value): boolean {
       if (typeof prop === 'symbol') {
