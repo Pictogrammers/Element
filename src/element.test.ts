@@ -1,11 +1,16 @@
-import { describe, expect, test, jest } from '@jest/globals';
+import { describe, expect, test, beforeEach, afterEach } from '@jest/globals';
 
-import { Component, Prop, Part } from "./element"
+import {
+  Component, Prop, Part,
+  getProps, selectComponent
+} from "./element";
 
 describe("createElement", () => {
 
+  const HELLO_WORLD = 'hello-world';
+
   @Component({
-    selector: 'hello-world',
+    selector: HELLO_WORLD,
     template: '<span part="count"></span>'
   })
   class HelloWorld extends HTMLElement {
@@ -17,21 +22,46 @@ describe("createElement", () => {
     }
   }
 
-  test("basic", () => {
-    const ele = document.createElement('hello-world') as HelloWorld;
-    document.body.append(ele);
-    expect(ele.count).toBe(0);
-    expect(ele.shadowRoot?.innerHTML).toBe('<span part="count">0</span>');
-    ele.remove();
+  beforeEach(() => {
+    var c = document.createElement(HELLO_WORLD);
+    document.body.appendChild(c);
   });
 
-  test("basic template render", () => {
-    const ele = document.createElement('hello-world') as HelloWorld;
-    document.body.append(ele);
-    ele.count = 1;
-    expect(ele.count).toBe(1);
-    expect(ele.shadowRoot?.innerHTML).toBe('<span part="count">1</span>');
-    ele.remove();
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  test('should be registered', () => {
+    expect(customElements.get(HELLO_WORLD)).toBeDefined();
+  });
+
+  test('should only expose known props', () => {
+    const props = getProps(HELLO_WORLD);
+    expect(props.length).toBe(1);
+    expect(props).toContain('count');
+  });
+
+  test('should only expose known parts', () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $count } = component;
+    expect($count).toBeDefined();
+  });
+
+  test("initial render", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $count } = component;
+    expect(component.count).toBe(0);
+    expect($count.textContent).toBe('0');
+  });
+
+  test("second render", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $count } = component;
+    component.count = 1;
+    expect(component.count).toBe(1);
+    expect($count.textContent).toBe('1');
   });
 
 });
