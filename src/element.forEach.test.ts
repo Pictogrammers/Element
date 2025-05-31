@@ -1,9 +1,8 @@
 import { describe, expect, test, beforeEach, afterEach } from '@jest/globals';
 
 import {
-  Component, Prop, Part,
+  Component, Prop, Part, forEach,
   getProps, selectComponent,
-  forEach
 } from "./element";
 
 describe("forEach", () => {
