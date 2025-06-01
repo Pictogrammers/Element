@@ -1,6 +1,6 @@
 export const addObserver: unique symbol = Symbol('addObserver');
 export const removeObserver: unique symbol = Symbol('removeObserver');
-export const getObservers: unique symbol = Symbol('getObservers');
+export const hasObserver: unique symbol = Symbol('getObservers');
 
 type AddObserverCallback = (key?: string) => void;
 type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
@@ -11,6 +11,8 @@ const arrayRead = ['forEach', 'slice', 'some', 'map', 'indexOf', 'lastIndexOf', 
 
 // key = obj, value = Map<ele, callback[]>
 const observers = new Map();
+//@ts-ignore
+window.observers = observers;
 
 type IsAny<T> = unknown extends T & string ? true : false;
 
@@ -43,6 +45,9 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
   return new Proxy(obj as any, {
     get(target: any, prop: string | symbol): any {
       if (typeof prop === 'symbol') {
+        if (prop === hasObserver) {
+          return observers.has(obj);
+        }
         if (prop === addObserver) {
           return (host: HTMLElement, callback: AddObserverCallback) => {
             if (observers.has(obj)) {
@@ -93,7 +98,10 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
           }
           return Reflect.get(target, prop);
         }
-        return Reflect.get(target, prop);
+        if (target[prop] instanceof Array) {
+          return createProxy(target[prop]);
+        }
+        // nested objects do not get proxied for perf
       }
       return Reflect.get(target, prop);
     },

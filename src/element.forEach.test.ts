@@ -130,16 +130,19 @@ describe("forEach nested", () => {
     expect(customElements.get(HELLO_RECURSIVE)).toBeDefined();
   });
 
-  test("items.push", () => {
+  test("items with nested items", () => {
     const component = selectComponent<HelloRecursive>(HELLO_RECURSIVE);
     const { $list } = component;
-    component.items.push({
+    component.items = [{
       label: 'Item 1',
       items: [{ label: 'Sub Item' }]
-    });
+    }];
     expect($list.children.length).toBe(1);
     const { $list: $subList } = $list.children[0] as HelloRecursive;
     expect($subList.children.length).toBe(1);
+    component.items[0].items[0].label = 'updated sub item';
+    const { $label: $subLabel } = $subList.children[0] as HelloRecursive;
+    expect($subLabel.textContent).toBe('updated sub item');
   });
 
 });
