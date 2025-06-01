@@ -740,7 +740,13 @@ function bindForEach(value: any[]) {
 export function selectComponent<T>(tagName: string): T {
   const component = document.querySelector(tagName) as any;
   const tags = new Set<string>();
-  for (const ele of component.shadowRoot.querySelectorAll('*')) {
+  let shadowRoot;
+  try {
+    shadowRoot = component.shadowRoot;
+  } catch (error: any) {
+    throw new Error('Add the component via document.body.appendChild(...) before selectComponent.');
+  }
+  for (const ele of shadowRoot.querySelectorAll('*')) {
     if (ele.localName.indexOf('-') !== -1) {
       tags.add(ele.localName);
     }

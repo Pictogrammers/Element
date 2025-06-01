@@ -72,4 +72,74 @@ describe("forEach", () => {
     expect($list.children.length).toBe(1);
   });
 
+  test("items.push item reactivity", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    component.items.push({ count: 0 });
+    const { $list } = component;
+    component.items[0].count = 2;
+    const firstItem = $list.children[0] as HelloItem;
+    expect(firstItem.count).toBe(2);
+    const { $count } = firstItem;
+    expect($count.textContent).toBe('2');
+  });
+
+});
+
+describe("forEach nested", () => {
+
+  const HELLO_RECURSIVE = 'hello-recursive';
+
+  @Component({
+    selector: HELLO_RECURSIVE,
+    template: '<div part="label"></div><div part="list"></div>'
+  })
+  class HelloRecursive extends HTMLElement {
+    @Prop() label: string = '';
+    @Prop() items: any[] = [];
+
+    @Part() $label: HTMLDivElement;
+    @Part() $list: HTMLDivElement;
+
+    connectedCallback() {
+      forEach({
+        container: this.$list,
+        items: this.items,
+        type() {
+          return HelloRecursive;
+        }
+      })
+    }
+
+    render() {
+      this.$label.textContent = this.label;
+    }
+  }
+
+  beforeEach(() => {
+    var c = document.createElement(HELLO_RECURSIVE);
+    document.body.appendChild(c);
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  test('should be registered', () => {
+    expect(customElements.get(HELLO_RECURSIVE)).toBeDefined();
+  });
+
+  test("items.push", () => {
+    const component = selectComponent<HelloRecursive>(HELLO_RECURSIVE);
+    const { $list } = component;
+    component.items.push({
+      label: 'Item 1',
+      items: [{ label: 'Sub Item' }]
+    });
+    expect($list.children.length).toBe(1);
+    const { $list: $subList } = $list.children[0] as HelloRecursive;
+    expect($subList.children.length).toBe(1);
+  });
+
 });

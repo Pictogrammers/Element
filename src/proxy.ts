@@ -1,5 +1,6 @@
-export const addObserver: unique symbol = Symbol('addCallback');
-export const removeObserver: unique symbol = Symbol('removeCallback');
+export const addObserver: unique symbol = Symbol('addObserver');
+export const removeObserver: unique symbol = Symbol('removeObserver');
+export const getObservers: unique symbol = Symbol('getObservers');
 
 type AddObserverCallback = (key?: string) => void;
 type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
