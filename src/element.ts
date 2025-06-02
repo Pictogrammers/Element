@@ -258,29 +258,6 @@ export function Prop(normalize?: (value: any) => any): any {
             } else {
               this[symbol] = value;
             }
-            /*
-            // Process binded array...
-            if (value[meta]) {
-              // Mirror underlying values
-              this[symbolMeta].forEach(({ host: x }: any) => {
-                value[meta].forEach(({ host: y }: any) => {
-                  x[symbol] = y[symbol];
-                });
-              });
-              // Merge meta data
-              this[symbolMeta].forEach((item: any, key: any) => {
-                value[meta].forEach(() => {
-                  value[meta].set(key, item);
-                });
-              });
-            }
-            else {
-              this[symbol].splice(0, this[symbol].length, ...value);
-              // has to be in the dom!!!
-              if (this[symbolMeta]) {
-                renderForEach(this[symbol], this[symbolMeta]);
-              }
-            }*/
           }
           else {
             this[symbol] = normalize ? normalize(value) : value;
@@ -328,8 +305,9 @@ export function Prop(normalize?: (value: any) => any): any {
               const self = this;
               return (...args: any) => {
                 const result = target[key](...args);
-                bindForEach(target);
-                renderForEach(target, self[symbolMeta]);
+                throw new Error('what uses this code path?');
+                //bindForEach(target);
+                //renderForEach(target, self[symbolMeta]);
                 self[symbolMeta].forEach(({ host }: any) => {
                   render(host, propertyKey);
                 });
@@ -516,7 +494,7 @@ function intersect(arr1: string[], arr2: string[]) {
 }
 
 function difference(arr1: string[], arr2: string[]) {
-  return arr1.filter(element => !arr2.includes(element));
+  return arr1.filter(str => !arr2.includes(str));
 }
 
 export function forEach({ container, items, type, create, connect, disconnect, update }: ForEach) {
@@ -559,14 +537,20 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   items[addObserver](container, (target: any, prop: any, args: any[]) => {
     switch(prop) {
       case Mutation.fill:
+        // this could be optimized more, but would need the previous items keys
         const [value, start, end] = args;
-        //const diff = difference(Object.keys(item), );
-        for (let i = start || 0; i < end || items.length; i++) {
-          Object.keys(items).forEach(key => delete items[items]);
+        for (let i = start || 0; i < (end || items.length); i++) {
+          Object.keys(value).forEach((key) => {
+            // @ts-ignore
+            container.children[i][key] = value[key];
+          });
         }
         break;
       case Mutation.pop:
-
+        const count = container.children.length;
+        if (count > 0) {
+          container.children[count - 1].remove();
+        }
         break;
       case Mutation.push:
         const first = container.children.length;
@@ -575,7 +559,9 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         });
         break;
       case Mutation.reverse:
-
+        for (var i = 1; i < container.children.length; i++){
+          container.insertBefore(container.children[i], container.children[0]);
+        }
         break;
       case Mutation.shift:
 
@@ -613,134 +599,6 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       case Mutation.unshift:
 
         break;
-    }
-  });
-}
-
-function renderForEach(items: ArrayWithMetaAndBind, privateMeta?: Map<HTMLElement, any>) {
-  // todo: make a list of cached item keys
-  const actualMeta = privateMeta ?? items[meta];
-  actualMeta?.forEach((value: any, c: HTMLElement) => {
-    // @ts-ignore
-    const { type, create, connect, disconnect, update } = value;
-    const existing = new Map();
-    const existingKeys: string[] = [];
-    Array.from(c.children).map(($item: any) => {
-      existing.set($item.dataset.key, $item);
-      existingKeys.push($item.dataset.key);
-    });
-    // Delete elements no longer in list
-    const latest = items.map(x => `${x.key}`);
-    const deleteItems = existingKeys.filter(x => !latest.includes(x));
-    deleteItems.forEach((x) => {
-      existingKeys.findIndex(y => y === x);
-      const delEle = existing.get(x);
-      const { observedAttributes } = delEle.constructor;
-      // Extract values from deleted element
-      const o = observedAttributes.reduce((obj: any, p: string) => {
-        obj[p] = delEle[p];
-        return obj;
-      }, {});
-      disconnect && disconnect(delEle, o, c.children);
-      delEle.remove();
-    });
-    let previous: any = null;
-    // Update or Insert elements
-    items.forEach((option, i) => {
-      const { key, ...options } = option;
-      if (existing.has(`${key}`)) {
-        // delete this?
-        options.index = i;
-        update && update(existing.get(`${key}`), options, c.children);
-      } else {
-        option.type = type(options);
-        const $new = document.createElement(camelToDash(option.type.name), option.type);
-        const { observedAttributes } = option.type;
-        option[meta].set($new, {});
-        $new.dataset.key = `${option.key}`;
-        if (!options.hasOwnProperty('index')) {
-          option.index = i;
-        }
-        observedAttributes.forEach((attr: string) => {
-          if (options.hasOwnProperty(attr)) {
-            //@ts-ignore
-            $new[attr] = option[attr];
-          }
-        });
-        create && create($new, options);
-        if (previous) {
-          existing.get(previous).after($new);
-        } else {
-          c.prepend($new);
-        }
-        connect && connect($new, options, c.children);
-        existing.set(`${option.key}`, $new);
-      }
-      previous = `${option.key}`;
-    });
-  });
-}
-
-// todo: looping all items is lazy
-function bindForEach(value: any[]) {
-  value.forEach(function (v, i) {
-    if (!hasProxy(v)) {
-      // keys should always be set, without it can't track
-      v.key ??= uuid();
-      const symbol = Symbol(`${v.key}`);
-      const symbolMeta = Symbol(`${v.key}:meta`);
-      v.index = i;
-      // @ts-ignore
-      value[symbol] = v;
-      // @ts-ignore
-      value[symbolMeta] = new Map<HTMLElement, any>();
-      value.splice(i, 1, new Proxy(v, {
-        get: function (target, prop) {
-          if (prop === meta) {
-            // @ts-ignore
-            return value[symbolMeta];
-          }
-          // reflect define property items/array -> proxy
-          // @ts-ignore
-          if (value[symbol][prop] instanceof Array) {
-            // @ts-ignore
-            if (!hasProxy(target[prop])) {
-              console.log('replace');
-              // Replace once
-              target[prop] = new Proxy(target[prop], {
-                  get(subTarget, subProp) {
-                      if (subProp === trackProxy) {
-                          return true;
-                      }
-                      // handle array modifiers
-                      return Reflect.get(subTarget, subProp);
-                  }
-              });
-            }
-          }
-          // @ts-ignore
-          return Reflect.get(value[symbol], prop);
-        },
-        set: function (target, prop, val) {
-          if (prop === meta) {
-            // @ts-ignore
-            value[symbolMeta] = val;
-            return true;
-          }
-          // @ts-ignore
-          value[symbol][prop] = val;
-          // @ts-ignore
-          const binded = value[symbolMeta];
-          binded && (binded.forEach((v: any, ele: any) => ele[prop] = val));
-          return Reflect.set(target, prop, val);
-        },
-        has(o, prop) {
-          if (prop == trackProxy) return true;
-          return prop in o;
-        }
-      }));
-    } else {
-      v.index = i;
     }
   });
 }

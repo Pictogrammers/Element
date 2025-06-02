@@ -65,6 +65,27 @@ describe("forEach", () => {
     expect($list.children.length).toBe(0);
   });
 
+  test("items.fill", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1, bar: 'hmm' }];
+    expect($list.children.length).toBe(1);
+    const item = $list.children[0] as HelloItem;
+    expect(item.$count.textContent).toBe('1');
+    component.items.fill({ count: 2, foo: 'hmm' });
+    expect($list.children.length).toBe(1);
+    expect(item.$count.textContent).toBe('2');
+  });
+
+  test("items.pop", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1 }, { count: 2 }];
+    expect($list.children.length).toBe(2);
+    component.items.pop();
+    expect($list.children.length).toBe(1);
+  });
+
   test("items.push", () => {
     const component = selectComponent<HelloWorld>(HELLO_WORLD);
     const { $list } = component;
