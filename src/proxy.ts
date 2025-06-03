@@ -78,7 +78,10 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
       }
       if (prop in target) {
         if (!Number.isNaN(Number(prop))) {
-          return createProxy(target[prop]);
+          if (typeof target[prop] === 'object') {
+            return createProxy(target[prop]);
+          }
+          return target[prop];
         }
         if (prop === 'copyWithin') {
           throw new Error('Unsupported array method copyWithin');

@@ -216,6 +216,7 @@ function render(self: any, propertyKey: string) {
 }
 
 function getSymbolType(value: any) {
+  if (value === null) { return 'null' }
   return isArray(value) ? 'array' : typeof value;
 }
 
@@ -242,7 +243,10 @@ export function Prop(normalize?: (value: any) => any): any {
         set: (value) => {
           // ToDo: cleanup
           const newSymbolType = getSymbolType(normalize ? normalize(value) : value);
-          if (propertyKey !== 'index' && this[symbolType] !== newSymbolType) {
+          if (
+            propertyKey !== 'index' && this[symbolType] !== newSymbolType
+            && this[symbolType] !== 'null' && newSymbolType !== 'null'
+          ) {
             throw new Error(`@Prop() ${propertyKey} with type '${this[symbolType]}' cannot be set to ${newSymbolType}.`);
           }
           if (this[symbolType] === 'array') {
@@ -515,14 +519,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       //@ts-ignore
       $new[attr] = item[attr];
     });
-    /*create && create($new, options);
-    if (previous) {
-      existing.get(previous).after($new);
-    } else {
-      c.prepend($new);
-    }
-    connect && connect($new, options, c.children);
-    existing.set(`${option.key}`, $new);*/
+    create && create($new, item);
     items[itemIndex][addObserver]($new, (prop: string, value: string) => {
       // @ts-ignore
       $new[prop] = value;
@@ -531,7 +528,9 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   }
   // Add initial items
   items.forEach((item: any, i: number) => {
-    container.appendChild(newItem(item, i));
+    const $new = newItem(item, i);
+    container.appendChild($new);
+    connect && connect($new, item, Array.from(container.children) as HTMLElement[]);
   });
   // Handle each mutation
   items[addObserver](container, (target: any, prop: any, args: any[]) => {
@@ -555,7 +554,9 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       case Mutation.push:
         const last = container.children.length;
         [...args].forEach((item: any, i) => {
-          container.appendChild(newItem(item, last + i));
+          const $new = newItem(item, last + i);
+          container.appendChild($new);
+          connect && connect($new, item, Array.from(container.children) as HTMLElement[]);
         });
         break;
       case Mutation.reverse:
@@ -588,6 +589,9 @@ export function forEach({ container, items, type, create, connect, disconnect, u
           } else {
             container.children[startIndex].after(...nItems);
           }
+          nItems.forEach(($new) => {
+            connect && connect($new, newItems[i], Array.from(container.children) as HTMLElement[]);
+          })
         }
         const shift = deleteCount - newCount;
         if (shift > 0 && startIndex + shift - 1 > 0) {
