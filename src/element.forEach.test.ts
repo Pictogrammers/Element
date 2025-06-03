@@ -84,6 +84,7 @@ describe("forEach", () => {
     expect($list.children.length).toBe(2);
     component.items.pop();
     expect($list.children.length).toBe(1);
+    expect(($list.children[0] as HelloItem).count).toBe(1);
   });
 
   test("items.push", () => {
@@ -94,6 +95,16 @@ describe("forEach", () => {
     expect($list.children.length).toBe(2);
     expect(($list.children[0] as HelloItem).count).toBe(9);
     expect(($list.children[1] as HelloItem).count).toBe(1);
+  });
+
+  test("items.shift", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1 }, { count: 2 }];
+    expect($list.children.length).toBe(2);
+    component.items.shift();
+    expect($list.children.length).toBe(1);
+    expect(($list.children[0] as HelloItem).count).toBe(2);
   });
 
   test("items.unshift", () => {

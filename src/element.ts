@@ -564,10 +564,12 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         }
         break;
       case Mutation.shift:
-
+        if (container.children.length) {
+          container.children[0].remove();
+        }
         break;
       case Mutation.sort:
-
+        throw new Error('ToDo... write sort.')
         break;
       case Mutation.splice:
         const [startIndex, deleteCount, ...newItems] = args;
