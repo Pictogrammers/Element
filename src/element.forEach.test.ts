@@ -89,8 +89,21 @@ describe("forEach", () => {
   test("items.push", () => {
     const component = selectComponent<HelloWorld>(HELLO_WORLD);
     const { $list } = component;
+    component.items = [{ count: 9 }];
     component.items.push({ count: 1 });
-    expect($list.children.length).toBe(1);
+    expect($list.children.length).toBe(2);
+    expect(($list.children[0] as HelloItem).count).toBe(9);
+    expect(($list.children[1] as HelloItem).count).toBe(1);
+  });
+
+  test("items.unshift", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 9 }];
+    component.items.unshift({ count: 1 });
+    expect($list.children.length).toBe(2);
+    expect(($list.children[0] as HelloItem).count).toBe(1);
+    expect(($list.children[1] as HelloItem).count).toBe(9);
   });
 
   test("items.push item reactivity", () => {

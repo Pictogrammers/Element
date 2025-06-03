@@ -553,9 +553,9 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         }
         break;
       case Mutation.push:
-        const first = container.children.length;
+        const last = container.children.length;
         [...args].forEach((item: any, i) => {
-          container.appendChild(newItem(item, first + i));
+          container.appendChild(newItem(item, last + i));
         });
         break;
       case Mutation.reverse:
@@ -597,7 +597,14 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         }
         break;
       case Mutation.unshift:
-
+        const first = container.children.length && container.children[0];
+        [...args].forEach((item: any, i) => {
+          if (first) {
+            first.before(newItem(item, i));
+          } else {
+            container.appendChild(newItem(item, i));
+          }
+        });
         break;
     }
   });
