@@ -120,25 +120,25 @@ import UiItem from 'ui/item';
     forEach({
       container: this.$items,
       items: this.options,
-      type(item) {
+      type: (item) => {
         return UiItem;
       },
-      create($item, item) {
+      create: ($item, item) => {
         // after creation of $item element
       },
-      connect($item, item, $items) {
+      connect: ($item, item, $items) => {
         // after connectedCallback
       },
-      disconnect($item, item, $items) {
+      disconnect: ($item, item, $items) => {
         // before disconnectedCallback
       },
-      update($item, item, $items) {
+      update: ($item, item, $items) => {
         // after every $item update
       },
-      minIndex(items) {
+      minIndex: (items) => {
         return 0; // start range to monitor node changes
       },
-      maxIndex(items) {
+      maxIndex: (items) => {
         return items.length; // end range to monitor node changes
       }
     });
