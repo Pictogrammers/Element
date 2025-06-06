@@ -1,6 +1,6 @@
 import { describe, expect, test, jest } from '@jest/globals';
 
-import { createProxy, addObserver, removeObserver } from "./proxy"
+import { createProxy, addObserver, removeObserver, isProxy } from "./proxy";
 
 const ele = document.createElement('div');
 
@@ -153,6 +153,21 @@ describe("createProxy nested object", () => {
     const observer = jest.fn();
     proxy[addObserver](ele, observer);
     proxy.nestedObj = { value: 'new' };
+  });
+
+});
+
+describe("createProxy singular", () => {
+
+  test("only single nested proxy", () => {
+    const list = [{
+      nestedObj: {
+        value: 'bar'
+      }
+    }];
+    const proxy = createProxy(list);
+    expect(proxy[isProxy]).toBe(true);
+    expect(proxy[0][isProxy]).toBe(true);
   });
 
 });

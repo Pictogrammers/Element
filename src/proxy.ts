@@ -1,6 +1,7 @@
 export const addObserver: unique symbol = Symbol('addObserver');
 export const removeObserver: unique symbol = Symbol('removeObserver');
 export const hasObserver: unique symbol = Symbol('getObservers');
+export const isProxy: unique symbol = Symbol('isProxy');
 
 type AddObserverCallback = (key?: string) => void;
 type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
@@ -19,11 +20,13 @@ type IsAny<T> = unknown extends T & string ? true : false;
 type ExtrasArray<T> = {
   [addObserver]: AddObserver;
   [removeObserver]: RemoveObserver;
+  [isProxy]: boolean;
 } & Array<T extends (infer U)[] ? Partial<U> : object>;
 
 type Extras = {
   [addObserver]: AddObserver;
   [removeObserver]: RemoveObserver;
+  [isProxy]: boolean;
 };
 
 // Short-circuit any or this is infinite
@@ -45,6 +48,9 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
   return new Proxy(obj as any, {
     get(target: any, prop: string | symbol): any {
       if (typeof prop === 'symbol') {
+        if (prop === isProxy) {
+          return true;
+        }
         if (prop === hasObserver) {
           return observers.has(obj);
         }

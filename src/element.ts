@@ -4,7 +4,8 @@ import {
   createProxy,
   addObserver,
   removeObserver,
-  hasObserver
+  hasObserver,
+  isProxy
 } from './proxy';
 
 interface CustomElementConfig {
@@ -220,9 +221,6 @@ function getSymbolType(value: any) {
   return isArray(value) ? 'array' : typeof value;
 }
 
-const arrayRender = ['fill', 'pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'unshift', 'with'];
-const arrayRead = ['forEach', 'map'];
-
 export function Prop(normalize?: (value: any) => any): any {
   return function <C, V>(_: Object, context: ClassFieldDecoratorContext<C, V>) {
     const propertyKey = context.name as string;
@@ -233,10 +231,18 @@ export function Prop(normalize?: (value: any) => any): any {
       Reflect.defineProperty(this, propertyKey, {
         get: () => {
           if (this[symbolType] === 'object') {
-            return createProxy(this[symbol]);
+            if (this[symbol][isProxy]) {
+              return this[symbol];
+            } else {
+              return createProxy(this[symbol]);
+            }
           }
           if (this[symbolType] === 'array') {
-            return createProxy(this[symbol]);
+            if (this[symbol][isProxy]) {
+              return this[symbol];
+            } else {
+              return createProxy(this[symbol]);
+            }
           }
           return this[symbol];
         },
@@ -302,26 +308,7 @@ export function Prop(normalize?: (value: any) => any): any {
             if (key === meta) {
               return this[symbolMeta];
             }
-            if (this[symbolMeta]
-              && arrayRender.includes(key as any)
-              && typeof target[key] === 'function') {
-              // @ts-ignore
-              const self = this;
-              return (...args: any) => {
-                const result = target[key](...args);
-                throw new Error('what uses this code path?');
-                //bindForEach(target);
-                //renderForEach(target, self[symbolMeta]);
-                self[symbolMeta].forEach(({ host }: any) => {
-                  render(host, propertyKey);
-                });
-                return result;
-              };
-            } else if (arrayRead.includes(key as any)) {
-              return (...args: any) => {
-                return target[key](...args);
-              };
-            }
+            console.log('errr???')
             return Reflect.get(this[symbol], key);
           },
           set: (target, key, v) => {
