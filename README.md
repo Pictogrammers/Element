@@ -147,6 +147,27 @@ import UiItem from 'ui/item';
   }
 ```
 
+### Methods
+
+Components can have methods for performing actions. For instance validating or resetting a form.
+
+```typescript
+import { Component } from '@pictogrammers/element';
+
+@Component({
+  selector: 'hello-world'
+})
+export default class HelloWorld extends HTMLElement {
+  method(arg) {
+    // code
+  }
+
+  #privateMethod(arg) {
+    // not accessible
+  }
+}
+```
+
 ## Advanced
 
 Starting with a simple component can allow one to extend it with more features later on. This can be done by extending components.
