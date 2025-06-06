@@ -104,8 +104,6 @@ set selected(value: string | boolean) {
 
 Components can create repeated lists of other components by using the `forEach` utility. Any updates will sync values to the component provided in the type function.
 
-> **Note:** `item` will automatically be added to 
-
 ```typescript
 import { forEach } from '@pictogrammers/element';
 
