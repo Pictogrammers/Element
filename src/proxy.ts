@@ -2,6 +2,7 @@ export const addObserver: unique symbol = Symbol('addObserver');
 export const removeObserver: unique symbol = Symbol('removeObserver');
 export const hasObserver: unique symbol = Symbol('getObservers');
 export const isProxy: unique symbol = Symbol('isProxy');
+export const getTarget: unique symbol = Symbol('getTarget');
 
 type AddObserverCallback = (key?: string) => void;
 type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
@@ -48,37 +49,37 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
   return new Proxy(obj as any, {
     get(target: any, prop: string | symbol): any {
       if (typeof prop === 'symbol') {
-        if (prop === isProxy) {
-          return true;
-        }
-        if (prop === hasObserver) {
-          return observers.has(obj);
-        }
-        if (prop === addObserver) {
-          return (host: HTMLElement, callback: AddObserverCallback) => {
-            if (observers.has(obj)) {
-              if (observers.get(obj).has(host)) {
-                observers.get(obj).get(host).push(callback);
+        switch (prop) {
+          case isProxy:
+            return true;
+          case getTarget:
+            return target;
+          case hasObserver:
+            return observers.has(obj);
+          case addObserver:
+            return (host: HTMLElement, callback: AddObserverCallback) => {
+              if (observers.has(obj)) {
+                if (observers.get(obj).has(host)) {
+                  observers.get(obj).get(host).push(callback);
+                } else {
+                  observers.get(obj).set(host, [callback]);
+                }
               } else {
-                observers.get(obj).set(host, [callback]);
+                observers.set(obj, new Map([[host, [callback]]]));
               }
-            } else {
-              observers.set(obj, new Map([[host, [callback]]]));
-            }
-          };
-        }
-        if (prop === removeObserver) {
-          return (host: HTMLElement) => {
-            if (observers.has(obj)) {
-              observers.get(obj).delete(host);
-              if (observers.get(obj).size === 0) {
-                observers.delete(obj);
+            };
+          case removeObserver:
+            return (host: HTMLElement) => {
+              if (observers.has(obj)) {
+                observers.get(obj).delete(host);
+                if (observers.get(obj).size === 0) {
+                  observers.delete(obj);
+                }
               }
-            }
-          };
-        }
-        if (prop === Symbol.toPrimitive || Symbol.toStringTag) {
-          return Reflect.get(target, prop);
+            };
+          case Symbol.toPrimitive:
+          case Symbol.toStringTag:
+            return Reflect.get(target, prop);
         }
         throw new Error('Unsupported symbol');
       }
