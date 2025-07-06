@@ -102,9 +102,7 @@ set selected(value: string | boolean) {
 
 ### Template Loops
 
-Components can create repeated lists of other components by using the `forEach` utility. A unique `key` property is required in each item of the items array (defaults to a uuid if not provided). Any updates will sync values to the component provided in the type function.
-
-> **Note:** `item` in the callbacks is readonly and contains `index`.
+Components can create repeated lists of other components by using the `forEach` utility. Any updates will sync values to the component provided in the type function.
 
 ```typescript
 import { forEach } from '@pictogrammers/element';
@@ -137,8 +135,35 @@ import UiItem from 'ui/item';
       update: ($item, item, $items) => {
         // after every $item update
       },
+      minIndex: (items) => {
+        return 0; // start range to monitor node changes
+      },
+      maxIndex: (items) => {
+        return items.length; // end range to monitor node changes
+      }
     });
   }
+```
+
+### Methods
+
+Components can have methods for performing actions. For instance validating or resetting a form.
+
+```typescript
+import { Component } from '@pictogrammers/element';
+
+@Component({
+  selector: 'hello-world'
+})
+export default class HelloWorld extends HTMLElement {
+  method(arg) {
+    // code
+  }
+
+  #privateMethod(arg) {
+    // not accessible
+  }
+}
 ```
 
 ## Advanced
@@ -187,7 +212,7 @@ export default class HelloWorldButton extends HelloWorld {
 
 ```html
 <button part="button">
-  <parent/> <!-- <div>Default!</div> -->
+  <parent /> <!-- <div>Default!</div> -->
 </button>
 ```
 
@@ -222,7 +247,7 @@ this.store.set('toggle' true);
 
 ## Development
 
-```
+```bash
 # Build
 npm run build
 # View files in dist/
@@ -230,6 +255,18 @@ npm run build
 npm link
 # Within a local project directory
 npm link @pictogrammers/element
+```
+
+After making changes run build.
+
+```bash
+npm run build
+```
+
+Always run tests before submitting any updates.
+
+```bash
+npm test
 ```
 
 ## Utility Base Class
