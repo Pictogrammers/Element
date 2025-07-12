@@ -472,9 +472,9 @@ type ForEach = {
   items: any;
   type: (item: any) => any;
   create?: ($item: HTMLElement, item: any) => void;
-  update?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
-  connect?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
-  disconnect?: ($item: HTMLElement, item: any, $items: HTMLElement[]) => void;
+  update?: ($item: HTMLElement, item: any) => void;
+  connect?: ($item: HTMLElement, item: any) => void;
+  disconnect?: ($item: HTMLElement, item: any) => void;
 }
 
 function intersect(arr1: string[], arr2: string[]) {
@@ -515,7 +515,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   items.forEach((item: any, i: number) => {
     const $new = newItem(item, i);
     container.appendChild($new);
-    connect && connect($new, item, Array.from(container.children) as HTMLElement[]);
+    connect && connect($new, item);
   });
   // Handle each mutation
   items[addObserver](container, (target: any, prop: any, args: any[]) => {
@@ -541,7 +541,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         [...args].forEach((item: any, i) => {
           const $new = newItem(item, last + i);
           container.appendChild($new);
-          connect && connect($new, item, Array.from(container.children) as HTMLElement[]);
+          connect && connect($new, item);
         });
         break;
       case Mutation.reverse:
@@ -575,7 +575,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
             container.children[startIndex].after(...nItems);
           }
           nItems.forEach(($new) => {
-            connect && connect($new, newItems[i], Array.from(container.children) as HTMLElement[]);
+            connect && connect($new, newItems[i]);
           })
         }
         const shift = deleteCount - newCount;
