@@ -84,3 +84,17 @@ proxyFoo[addObserver](ele, (prop, value) => {
 foo.name = 'new value';
 // 'name', 'new value'
 ```
+
+## `getProxyValue`
+
+Every proxy is unique when evaluated. The `getProxyValue()` will unwrap the proxy returning the underlying target. This value will be unique and is safe to use in equality checks or `Map` / `Set` lists.
+
+```typescript
+import { getProxyValue } from '@pictogrammers/element';
+
+const unproxyItem = getProxyValue(this.selectedItem);
+const selectedItems = new Set();
+
+selectedItems.add(unproxyItem);
+selectedItems.has(unproxyItem); // true
+```

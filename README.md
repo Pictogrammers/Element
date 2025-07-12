@@ -292,6 +292,10 @@ export default class HelloOverlay extends HtmlElement {
 }
 ```
 
+## Proxy Objects
+
+See [Proxy Docs](src/proxy.md). Specifically `getProxyValue` method.
+
 ## Jest Utils
 
 - `selectComponent<T>(tag: string): T`
