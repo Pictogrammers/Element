@@ -14,6 +14,7 @@ describe("forEach", () => {
     template: '<span part="count"></span>'
   })
   class HelloItem extends HTMLElement {
+    @Prop() index: number;
     @Prop() count: number = 0;
     @Part() $count: HTMLSpanElement;
 
@@ -75,6 +76,7 @@ describe("forEach", () => {
     component.items.fill({ count: 2, foo: 'hmm' });
     expect($list.children.length).toBe(1);
     expect(item.$count.textContent).toBe('2');
+    expect(($list.children[0] as HelloItem).index).toBe(0);
   });
 
   test("items.pop", () => {
@@ -82,19 +84,27 @@ describe("forEach", () => {
     const { $list } = component;
     component.items = [{ count: 1 }, { count: 2 }];
     expect($list.children.length).toBe(2);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
+    expect(($list.children[1] as HelloItem).index).toBe(1);
     component.items.pop();
     expect($list.children.length).toBe(1);
     expect(($list.children[0] as HelloItem).count).toBe(1);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
   });
 
   test("items.push", () => {
     const component = selectComponent<HelloWorld>(HELLO_WORLD);
     const { $list } = component;
     component.items = [{ count: 9 }];
+    expect($list.children.length).toBe(1);
+    expect(($list.children[0] as HelloItem).count).toBe(9);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
     component.items.push({ count: 1 });
     expect($list.children.length).toBe(2);
     expect(($list.children[0] as HelloItem).count).toBe(9);
     expect(($list.children[1] as HelloItem).count).toBe(1);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
+    expect(($list.children[1] as HelloItem).index).toBe(1);
   });
 
   test("items.shift", () => {
@@ -105,16 +115,37 @@ describe("forEach", () => {
     component.items.shift();
     expect($list.children.length).toBe(1);
     expect(($list.children[0] as HelloItem).count).toBe(2);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
   });
 
   test("items.unshift", () => {
     const component = selectComponent<HelloWorld>(HELLO_WORLD);
     const { $list } = component;
     component.items = [{ count: 9 }];
+    expect($list.children.length).toBe(1);
     component.items.unshift({ count: 1 });
     expect($list.children.length).toBe(2);
     expect(($list.children[0] as HelloItem).count).toBe(1);
     expect(($list.children[1] as HelloItem).count).toBe(9);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
+    expect(($list.children[1] as HelloItem).index).toBe(1);
+  });
+
+  test.only("items.splice", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 6 }, { count: 7 }, { count: 9 }];
+    expect($list.children.length).toBe(3);
+    component.items.splice(1, 1, { count: 77 }, { count: 88 });
+    expect($list.children.length).toBe(4);
+    expect(($list.children[0] as HelloItem).count).toBe(6);
+    expect(($list.children[1] as HelloItem).count).toBe(77);
+    expect(($list.children[2] as HelloItem).count).toBe(88);
+    expect(($list.children[3] as HelloItem).count).toBe(9);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
+    expect(($list.children[1] as HelloItem).index).toBe(1);
+    expect(($list.children[2] as HelloItem).index).toBe(2);
+    expect(($list.children[3] as HelloItem).index).toBe(3);
   });
 
   test("items.push item reactivity", () => {
@@ -124,6 +155,7 @@ describe("forEach", () => {
     component.items[0].count = 2;
     const firstItem = $list.children[0] as HelloItem;
     expect(firstItem.count).toBe(2);
+    expect(firstItem.index).toBe(0);
     const { $count } = firstItem;
     expect($count.textContent).toBe('2');
   });

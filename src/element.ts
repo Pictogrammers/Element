@@ -262,7 +262,8 @@ export function Prop(normalize?: (value: any) => any): any {
             }
             const proxified = createProxy(this[symbol]);
             if (proxified[hasObserver]) {
-              proxified.splice(0, this[symbol].length, ...value);
+              const unproxyValue = value[isProxy] ? getProxyValue(value) : value;
+              proxified.splice(0, this[symbol].length, ...unproxyValue);
             } else {
               this[symbol] = value;
             }
@@ -504,7 +505,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       //@ts-ignore
       $new[attr] = item[attr];
     });
-    create && create($new, item);
+    create && create($new, createProxy(item));
     items[itemIndex][addObserver]($new, (prop: string, value: string) => {
       // @ts-ignore
       $new[prop] = value;
@@ -515,7 +516,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   items.forEach((item: any, i: number) => {
     const $new = newItem(item, i);
     container.appendChild($new);
-    connect && connect($new, item);
+    connect && connect($new, createProxy(item));
   });
   // Handle each mutation
   items[addObserver](container, (target: any, prop: any, args: any[]) => {
@@ -541,7 +542,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         [...args].forEach((item: any, i) => {
           const $new = newItem(item, last + i);
           container.appendChild($new);
-          connect && connect($new, item);
+          connect && connect($new, createProxy(item));
         });
         break;
       case Mutation.reverse:
@@ -552,6 +553,11 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       case Mutation.shift:
         if (container.children.length) {
           container.children[0].remove();
+        }
+        // update every index
+        for (let i = 0; i < container.children.length; i++) {
+          // @ts-ignore
+          container.children[i].index = i;
         }
         break;
       case Mutation.sort:
@@ -567,17 +573,19 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         let newCount = newItems.length || 0;
         if (newCount > 0) {
           const nItems = newItems.map((item: any, i: number) => {
-            return newItem(item, startIndex + i)
+            return newItem(item, startIndex + i);
           });
           if (startIndex === 0) {
-            container.append(...nItems);
+            container.prepend(...nItems);
           } else {
-            container.children[startIndex].after(...nItems);
+            container.children[startIndex - 1].after(...nItems);
           }
           nItems.forEach(($new) => {
             connect && connect($new, newItems[i]);
-          })
+          });
         }
+        //@ts-ignore
+        console.log([...container.children].map(x => x.count));
         const shift = deleteCount - newCount;
         if (shift > 0 && startIndex + shift - 1 > 0) {
           // update index values after
@@ -589,13 +597,20 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         break;
       case Mutation.unshift:
         const first = container.children.length && container.children[0];
+        const newUnshifts = [...args].length;
         [...args].forEach((item: any, i) => {
           if (first) {
+            console.log('insert->', i);
             first.before(newItem(item, i));
           } else {
             container.appendChild(newItem(item, i));
           }
         });
+        // update all index values after
+        for (let i = newUnshifts; i < container.children.length; i++) {
+          // @ts-ignore
+          container.children[i].index = i;
+        }
         break;
     }
   });
