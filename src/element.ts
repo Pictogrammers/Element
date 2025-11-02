@@ -580,16 +580,15 @@ export function forEach({ container, items, type, create, connect, disconnect, u
           } else {
             container.children[startIndex - 1].after(...nItems);
           }
+          for (let i = startIndex - deleteCount + newCount; i < container.children.length; i++) {
+            // @ts-ignore
+            container.children[i].index = i;
+          }
           nItems.forEach(($new) => {
             connect && connect($new, newItems[i]);
           });
-        }
-        //@ts-ignore
-        console.log([...container.children].map(x => x.count));
-        const shift = deleteCount - newCount;
-        if (shift > 0 && startIndex + shift - 1 > 0) {
-          // update index values after
-          for (let i = startIndex + shift - 1; i < container.children.length; i++) {
+        } else {
+          for (let i = startIndex; i < container.children.length; i++) {
             // @ts-ignore
             container.children[i].index = i;
           }
