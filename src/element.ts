@@ -491,7 +491,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   function newItem(item: any, itemIndex: number) {
     const comp = type(item);
     const $new = document.createElement(camelToDash(comp.name), comp);
-    const { observedAttributes } = comp;
+    const observedAttributes = comp.observedAttributes ?? [];
     const props = intersect(Object.keys(item), observedAttributes);
     if (observedAttributes.includes('index')) {
       //@ts-ignore
