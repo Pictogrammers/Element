@@ -84,10 +84,6 @@ export function Component(config: CustomElementConfig = {}) {
       cls.prototype[template] = config.template || '';
     }
 
-    if (!cls.symbols) {
-      cls.symbols = {};
-    }
-
     const connectedCallback = cls.prototype.connectedCallback || (() => { });
     const disconnectedCallback = cls.prototype.disconnectedCallback || (() => { });
 
