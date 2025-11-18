@@ -1,4 +1,4 @@
-import './global';
+import './global.js';
 import {
   Mutation,
   createProxy,
@@ -7,7 +7,7 @@ import {
   hasObserver,
   isProxy,
   getTarget
-} from './proxy';
+} from './proxy.js';
 
 interface CustomElementConfig {
   selector?: string;
@@ -129,9 +129,26 @@ export function Component(config: CustomElementConfig = {}) {
           ? Promise.resolve()
           : customElements.whenDefined(tag);
       });
+      const render = () => {
+        this[parent].map((p: any) => {
+          if (p.render) {
+            p.render.call(
+              this,
+              cls.observedAttributes
+                ? cls.observedAttributes.reduce((a: any, c: string) => {
+                  const n = dashToCamel(c);
+                  a[n] = true;
+                  return a;
+                }, {})
+                : {}
+            );
+          }
+        });
+      }
       if (promises.length === 0) {
         this[init] = true;
         connectedCallback.call(this);
+        render();
       } else {
         Promise.all(promises).then(() => {
           this[init] = true;
@@ -140,23 +157,9 @@ export function Component(config: CustomElementConfig = {}) {
           for (const slot of this.shadowRoot.querySelectorAll('slot')) {
             slot.dispatchEvent(new CustomEvent('slotchange'));
           }
+          render();
         });
       }
-
-      this[parent].map((p: any) => {
-        if (p.render) {
-          p.render.call(
-            this,
-            cls.observedAttributes
-              ? cls.observedAttributes.reduce((a: any, c: string) => {
-                const n = dashToCamel(c);
-                a[n] = true;
-                return a;
-              }, {})
-              : {}
-          );
-        }
-      });
     };
 
     cls.prototype.disconnectedCallback = function () {
@@ -651,5 +654,5 @@ export function selectPart<T>(component: HTMLElement, name: string): T {
 
 export function getProps(tag: string): string[] {
   const { symbols } = customElements.get(tag) as any;
-  return Object.keys(symbols);
+  return Object.keys(symbols ?? {});
 }

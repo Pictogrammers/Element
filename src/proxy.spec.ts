@@ -16,7 +16,7 @@ describe("createProxy", () => {
     proxy.fill(
       { label: 'Item 2', value: 'item2' }
     );
-    expect(observer).toBeCalledTimes(1);
+    expect(observer).toHaveBeenCalledTimes(1);
     expect(observer.mock.calls[0][1]).toBe('fill');
   });
 
@@ -30,7 +30,7 @@ describe("createProxy", () => {
     proxy[addObserver](ele, observer);
     proxy.pop();
     expect(proxy.length).toBe(0);
-    expect(observer).toBeCalledTimes(1);
+    expect(observer).toHaveBeenCalledTimes(1);
     expect(observer.mock.calls[0][1]).toBe('pop');
   });
 
@@ -46,7 +46,7 @@ describe("createProxy", () => {
       { label: 'Item 2', value: 'item2' },
       { label: 'Item 3', value: 'item3' }
     );
-    expect(observer).toBeCalledTimes(1);
+    expect(observer).toHaveBeenCalledTimes(1);
     expect(observer.mock.calls[0][1]).toBe('push');
   });
 
@@ -63,7 +63,7 @@ describe("createProxy", () => {
     proxy[addObserver](ele, observer);
     proxy.reverse();
     expect(proxy.length).toBe(2);
-    expect(observer).toBeCalledTimes(1);
+    expect(observer).toHaveBeenCalledTimes(1);
     expect(observer.mock.calls[0][1]).toBe('reverse');
   });
 
@@ -80,7 +80,7 @@ describe("createProxy", () => {
     proxy[addObserver](ele, observer);
     proxy.shift();
     expect(proxy.length).toBe(1);
-    expect(observer).toBeCalledTimes(1);
+    expect(observer).toHaveBeenCalledTimes(1);
     expect(observer.mock.calls[0][1]).toBe('shift');
   });
 
@@ -98,7 +98,7 @@ describe("createProxy", () => {
     const segment = proxy.slice(1, 2);
     expect(proxy.length).toBe(2);
     expect(segment.length).toBe(1);
-    expect(observer).toBeCalledTimes(0);
+    expect(observer).toHaveBeenCalledTimes(0);
   });
 
   test("removeObserver array push", () => {
@@ -111,7 +111,7 @@ describe("createProxy", () => {
     proxy[addObserver](ele, observer);
     proxy[removeObserver](ele);
     proxy.push({ label: 'Item 2', value: 'item2' });
-    expect(observer).not.toBeCalled();
+    expect(observer).not.toHaveBeenCalled();
   });
 
   test("addObserver object", () => {
@@ -123,8 +123,8 @@ describe("createProxy", () => {
     const observer = jest.fn();
     proxy[0][addObserver](ele, observer);
     proxy[0].label = 'new';
-    expect(observer).toBeCalledTimes(1);
-    expect(observer).toBeCalledWith('label', 'new');
+    expect(observer).toHaveBeenCalledTimes(1);
+    expect(observer).toHaveBeenCalledWith('label', 'new');
   });
 
   test("removeObserver object", () => {
@@ -137,7 +137,7 @@ describe("createProxy", () => {
     proxy[0][addObserver](ele, observer);
     proxy[0][removeObserver](ele);
     proxy[0].label = 'new';
-    expect(observer).not.toBeCalled();
+    expect(observer).not.toHaveBeenCalled();
   });
 });
 
