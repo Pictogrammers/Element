@@ -131,7 +131,7 @@ describe("forEach", () => {
     expect(($list.children[1] as HelloItem).index).toBe(1);
   });
 
-  test.only("items.splice", () => {
+  test("items.splice", () => {
     const component = selectComponent<HelloWorld>(HELLO_WORLD);
     const { $list } = component;
     component.items = [{ count: 6 }, { count: 7 }, { count: 9 }];

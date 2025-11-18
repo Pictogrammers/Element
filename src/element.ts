@@ -598,7 +598,6 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         const newUnshifts = [...args].length;
         [...args].forEach((item: any, i) => {
           if (first) {
-            console.log('insert->', i);
             first.before(newItem(item, i));
           } else {
             container.appendChild(newItem(item, i));
