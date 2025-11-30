@@ -102,7 +102,14 @@ export function Component(config: CustomElementConfig = {}) {
           $template.innerHTML = cls.prototype[template] || '';
           const $node = document.importNode($template.content, true);
           const shadowRoot = this.attachShadow({ mode: 'open' });
-          shadowRoot.adoptedStyleSheets = cls.prototype[style];
+          shadowRoot.adoptedStyleSheets = cls.prototype[style].map((i: any) => {
+              if (i instanceof CSSStyleSheet) {
+                  return i;
+              }
+              var s = new CSSStyleSheet();
+              s.replaceSync(i.toString());
+              return s;
+          });
           shadowRoot.appendChild($node);
         }
       } else if (this[init] && config.style) {

@@ -187,8 +187,10 @@ describe("forEach nested", () => {
       })
     }
 
-    render() {
-      this.$label.textContent = this.label;
+    render(changes: any) {
+      if (changes.label) {
+        this.$label.textContent = this.label;
+      }
     }
   }
 
@@ -220,6 +222,92 @@ describe("forEach nested", () => {
     component.items[0].items[0].label = 'updated sub item';
     const { $label: $subLabel } = $subList.children[0] as HelloRecursive;
     expect($subLabel.textContent).toBe('updated sub item');
+  });
+
+});
+
+describe("forEach double binding", () => {
+
+  const HELLO_MULTI_ITEM = 'hello-multi-item';
+
+  @Component({
+    selector: HELLO_MULTI_ITEM,
+    template: '<div part="label"></div>'
+  })
+  class HelloMultiItem extends HTMLElement {
+    @Prop() label: string = '';
+
+    @Part() $label: HTMLDivElement;
+
+    render(changes: any) {
+      if (changes.label) {
+        this.$label.textContent = this.label;
+      }
+    }
+  }
+
+  const HELLO_MULTI = 'hello-multi';
+
+  @Component({
+    selector: HELLO_MULTI,
+    template: '<div part="list"></div>'
+  })
+  class HelloMulti extends HTMLElement {
+    @Prop() items: any[] = [];
+
+    @Part() $list: HTMLDivElement;
+
+    connectedCallback() {
+      forEach({
+        container: this.$list,
+        items: this.items,
+        type() {
+          return HelloMultiItem;
+        }
+      })
+    }
+  }
+
+  beforeEach(() => {
+    var c1 = document.createElement(HELLO_MULTI);
+    document.body.appendChild(c1);
+    var c2 = document.createElement(HELLO_MULTI);
+    document.body.appendChild(c2);
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  test('should be registered', () => {
+    expect(customElements.get(HELLO_MULTI)).toBeDefined();
+    expect(customElements.get(HELLO_MULTI_ITEM)).toBeDefined();
+  });
+
+  test("bind the same data to 2 components", () => {
+    const singleton = [{
+      label: 'Hello World 1!'
+    }];
+    const components = Array.from(document.querySelectorAll(HELLO_MULTI)) as HelloMulti[];
+    components.forEach((component) => {
+      component.items = singleton;
+    });
+    // Verify item rendered
+    const c1 = components[0].$list.children[0] as HelloMultiItem;
+    expect(c1.$label.textContent).toBe('Hello World 1!');
+    const c2 = components[1].$list.children[0] as HelloMultiItem;
+    expect(c2.$label.textContent).toBe('Hello World 1!');
+    // Push 1 more item
+    singleton.push({
+      label: 'Hello World 2!'
+    });
+    // Verify rendered new item
+    const c1_2 = components[0].$list.children[1] as HelloMultiItem;
+    expect(c1_2.$label.textContent).toBe('Hello World 2!');
+    const c2_2 = components[1].$list.children[1] as HelloMultiItem;
+    expect(c2_2.$label.textContent).toBe('Hello World 2!');
   });
 
 });
