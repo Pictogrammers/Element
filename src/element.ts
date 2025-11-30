@@ -4,6 +4,7 @@ import {
   createProxy,
   addObserver,
   removeObserver,
+  swapObserver,
   hasObserver,
   isProxy,
   getTarget
@@ -268,8 +269,12 @@ export function Prop(normalize?: (value: any) => any): any {
             }
             const proxified = createProxy(this[symbol]);
             if (proxified[hasObserver]) {
-              const unproxyValue = value[isProxy] ? getProxyValue(value) : value;
-              proxified.splice(0, this[symbol].length, ...unproxyValue);
+              const unproxyValue = value[isProxy] ? value[getTarget] : value;
+              proxified[swapObserver](this, unproxyValue);
+              this[symbol] = value;
+              //proxified.splice(0, this[symbol].length, ...unproxyValue);
+              console.log('>>> trigger render???', this, propertyKey);
+              // render(this, propertyKey); // do we need to trigger this for arrays being remapped?
             } else {
               this[symbol] = value;
             }
@@ -526,6 +531,13 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   });
   // Handle each mutation
   items[addObserver](container, (target: any, prop: any, args: any[]) => {
+    if (prop === Mutation.swap) {
+        const oldLength = items.length;
+        items = createProxy(args[0]);
+        // re-use splice to delete old nodes and add new ones (performance?)
+        prop = Mutation.splice;
+        args = [0, oldLength, ...args[0]];
+    }
     switch(prop) {
       case Mutation.fill:
         // this could be optimized more, but would need the previous items keys

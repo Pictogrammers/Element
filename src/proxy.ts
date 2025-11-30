@@ -1,6 +1,7 @@
 export const addObserver: unique symbol = Symbol('addObserver');
 export const removeObserver: unique symbol = Symbol('removeObserver');
 export const hasObserver: unique symbol = Symbol('getObservers');
+export const swapObserver: unique symbol = Symbol('swapObserver');
 export const isProxy: unique symbol = Symbol('isProxy');
 export const getTarget: unique symbol = Symbol('getTarget');
 
@@ -32,8 +33,8 @@ type Extras = {
 
 // Short-circuit any or this is infinite
 type RecursiveProxy<T> = IsAny<T> extends true
-? any 
-: T extends Array<any>
+  ? any
+  : T extends Array<any>
   ? ExtrasArray<T> & {
     [P in keyof T]: IsAny<T[P]> extends true ? any : RecursiveProxy<T[P]>
   }
@@ -41,8 +42,8 @@ type RecursiveProxy<T> = IsAny<T> extends true
     [P in keyof T]: IsAny<T[P]> extends true
     ? any
     : T[P] extends Array<any>
-      ? RecursiveProxy<T[P]>
-      : T[P]
+    ? RecursiveProxy<T[P]>
+    : T[P]
   } & Extras;
 
 export function createProxy<T>(obj: T): RecursiveProxy<T> {
@@ -56,6 +57,28 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
             return target;
           case hasObserver:
             return observers.has(obj);
+          case swapObserver:
+            return (componentHost: HTMLElement, newObj: any) => {
+              const hosts = observers.get(obj);
+              hosts.forEach((value: any, host: HTMLElement) => {
+                if ((host.getRootNode() as ShadowRoot).host === componentHost) {
+                  const callbacks = hosts.get(host);
+                  if (observers.has(newObj)) {
+                    if (observers.get(newObj).has(host)) {
+                      observers.get(newObj).get(host).push(hosts.get(host));
+                    } else {
+                      observers.get(newObj).set(host, hosts.get(host));
+                    }
+                  } else {
+                    observers.set(newObj, new Map([[host, callbacks]]));
+                  }
+                  observers.delete(obj);
+                  callbacks.forEach((callback: any) => {
+                    callback(null, Mutation.swap, [newObj]);
+                  });
+                }
+              });
+            }
           case addObserver:
             return (host: HTMLElement, callback: AddObserverCallback) => {
               if (observers.has(obj)) {
@@ -95,11 +118,11 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         }
         if (arrayMutate.includes(prop)) {
           if (observers.has(target)) {
-            return function() {
+            return function () {
               const result = Array.prototype[prop as any].apply(target, arguments);
               const map = observers.get(target);
               map.forEach((callbacks: any, host: HTMLElement) => {
-                callbacks.forEach((callback: any) =>  {
+                callbacks.forEach((callback: any) => {
                   callback(target, prop, arguments);
                 });
               });
@@ -125,7 +148,7 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
       if (observers.has(target)) {
         const map = observers.get(target);
         map.forEach((callbacks: any, host: HTMLElement) => {
-          callbacks.forEach((callback: any) =>  {
+          callbacks.forEach((callback: any) => {
             callback(prop, value);
           });
         });
@@ -143,5 +166,6 @@ export const Mutation = {
   shift: 'shift',
   sort: 'sort',
   splice: 'splice',
-  unshift: 'unshift'
+  unshift: 'unshift',
+  swap: 'swap',
 };

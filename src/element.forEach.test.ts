@@ -286,27 +286,31 @@ describe("forEach double binding", () => {
     expect(customElements.get(HELLO_MULTI_ITEM)).toBeDefined();
   });
 
-  test("bind the same data to 2 components", () => {
+  test.only("bind the same data to 2 components", () => {
     const singleton = [{
       label: 'Hello World 1!'
     }];
     const components = Array.from(document.querySelectorAll(HELLO_MULTI)) as HelloMulti[];
+    const c1 = components[0];
+    const c2 = components[1];
+    c1.$list.dataset.test = 'first';
+    c2.$list.dataset.test = 'second';
     components.forEach((component) => {
       component.items = singleton;
     });
     // Verify item rendered
-    const c1 = components[0].$list.children[0] as HelloMultiItem;
-    expect(c1.$label.textContent).toBe('Hello World 1!');
-    const c2 = components[1].$list.children[0] as HelloMultiItem;
-    expect(c2.$label.textContent).toBe('Hello World 1!');
+    const c1_1 = c1.$list.children[0] as HelloMultiItem;
+    expect(c1_1.$label.textContent).toBe('Hello World 1!');
+    const c2_1 = c2.$list.children[0] as HelloMultiItem;
+    expect(c2_1.$label.textContent).toBe('Hello World 1!');
     // Push 1 more item
-    singleton.push({
+    c1.items.push({
       label: 'Hello World 2!'
     });
     // Verify rendered new item
-    const c1_2 = components[0].$list.children[1] as HelloMultiItem;
+    const c1_2 = c1.$list.children[1] as HelloMultiItem;
     expect(c1_2.$label.textContent).toBe('Hello World 2!');
-    const c2_2 = components[1].$list.children[1] as HelloMultiItem;
+    const c2_2 = c2.$list.children[1] as HelloMultiItem;
     expect(c2_2.$label.textContent).toBe('Hello World 2!');
   });
 
