@@ -286,7 +286,7 @@ describe("forEach double binding", () => {
     expect(customElements.get(HELLO_MULTI_ITEM)).toBeDefined();
   });
 
-  test.only("bind the same data to 2 components", () => {
+  test("bind the same data to 2 components", () => {
     const singleton = [{
       label: 'Hello World 1!'
     }];
