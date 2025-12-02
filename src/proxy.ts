@@ -12,8 +12,15 @@ type RemoveObserver = (host: HTMLElement) => void;
 const arrayMutate = ['fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
 const arrayRead = ['forEach', 'slice', 'some', 'map', 'indexOf', 'lastIndexOf', 'width'];
 
-// key = obj, value = Map<ele, callback[]>
-const observers = new Map();
+// key = obj                - observed object
+// value = Map
+//   key = host             - web component
+//   value = Map
+//     key = element        - forEach container or binding
+//     value = callback[]
+type ElementMap = Map<Element, any[]>;
+type HostMap = Map<Element, ElementMap>;
+const observers = new Map<any, HostMap>();
 //@ts-ignore
 window.observers = observers;
 
@@ -56,46 +63,95 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
           case getTarget:
             return target;
           case hasObserver:
-            return observers.has(obj);
-          case swapObserver:
-            return (componentHost: HTMLElement, newObj: any) => {
+            return (host: HTMLElement) => {
               const hosts = observers.get(obj);
-              hosts.forEach((value: any, host: HTMLElement) => {
-                if ((host.getRootNode() as ShadowRoot).host === componentHost) {
-                  const callbacks = hosts.get(host);
-                  if (observers.has(newObj)) {
-                    if (observers.get(newObj).has(host)) {
-                      observers.get(newObj).get(host).push(hosts.get(host));
+              return hosts?.has(host);
+            };
+          case swapObserver:
+            return (host: HTMLElement, newObj: any) => {
+              const hosts = observers.get(obj);
+              if (hosts) {
+                const elements = hosts.get(host);
+                if (elements) {
+                  elements.forEach((callbacks: any[], element) => {
+                    if (callbacks) {
+                      const hostsNew = observers.get(newObj);
+                      if (hostsNew) {
+                        const elementsNew = hostsNew.get(host);
+                        if (elementsNew) {
+                          elementsNew.set(element, callbacks);
+                        } else {
+                          hostsNew.set(
+                            host,
+                            new Map([[
+                              element,
+                              callbacks
+                            ]])
+                          );
+                        }
+                      } else {
+                        observers.set(
+                          newObj,
+                          new Map([[
+                            host,
+                            new Map([[
+                              element,
+                              callbacks
+                            ]])
+                          ]])
+                        );
+                      }
                     } else {
-                      observers.get(newObj).set(host, hosts.get(host));
+                      throw new Error('Unreachable');
                     }
-                  } else {
-                    observers.set(newObj, new Map([[host, callbacks]]));
-                  }
-                  observers.delete(obj);
-                  callbacks.forEach((callback: any) => {
-                    callback(null, Mutation.swap, [newObj]);
+                    elements.delete(element);
+                    callbacks.forEach((callback: any) => {
+                      callback(null, Mutation.swap, [newObj]);
+                    });
                   });
                 }
-              });
+              }
             }
           case addObserver:
-            return (host: HTMLElement, callback: AddObserverCallback) => {
-              if (observers.has(obj)) {
-                if (observers.get(obj).has(host)) {
-                  observers.get(obj).get(host).push(callback);
+            return (element: HTMLElement, callback: AddObserverCallback) => {
+              const host = (element.getRootNode() as ShadowRoot).host;
+              const hosts = observers.get(obj);
+              if (hosts) {
+                const elements = hosts.get(host);
+                if (elements) {
+                  const callbacks = elements.get(element);
+                  if (callbacks) {
+                    callbacks.push(callback);
+                  } else {
+                    elements.set(element, [callback]);
+                  }
                 } else {
-                  observers.get(obj).set(host, [callback]);
+                  hosts.set(
+                    host,
+                    new Map([[
+                      element, [callback]
+                    ]])
+                  );
                 }
               } else {
-                observers.set(obj, new Map([[host, [callback]]]));
+                observers.set(
+                  obj,
+                  new Map([[
+                    host,
+                    new Map([[
+                      element, [callback]
+                    ]])
+                  ]])
+                );
               }
             };
           case removeObserver:
-            return (host: HTMLElement) => {
-              if (observers.has(obj)) {
-                observers.get(obj).delete(host);
-                if (observers.get(obj).size === 0) {
+            return (element: HTMLElement) => {
+              const host = (element.getRootNode() as ShadowRoot).host;
+              const hosts = observers.get(obj);
+              if (hosts) {
+                hosts.delete(host);
+                if (hosts.size === 0) {
                   observers.delete(obj);
                 }
               }
@@ -120,10 +176,12 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
           if (observers.has(target)) {
             return function () {
               const result = Array.prototype[prop as any].apply(target, arguments);
-              const map = observers.get(target);
-              map.forEach((callbacks: any, host: HTMLElement) => {
-                callbacks.forEach((callback: any) => {
-                  callback(target, prop, arguments);
+              const hosts = observers.get(target);
+              hosts?.forEach((elements) => {
+                elements.forEach((callbacks: any) => {
+                  callbacks.forEach((callback: any) => {
+                    callback(target, prop, arguments);
+                  });
                 });
               });
               return result;
@@ -146,10 +204,12 @@ export function createProxy<T>(obj: T): RecursiveProxy<T> {
         return Reflect.set(target, prop, value);
       }
       if (observers.has(target)) {
-        const map = observers.get(target);
-        map.forEach((callbacks: any, host: HTMLElement) => {
-          callbacks.forEach((callback: any) => {
-            callback(prop, value);
+        const hosts = observers.get(target);
+        hosts?.forEach((elements) => {
+          elements.forEach((callbacks: any) => {
+            callbacks.forEach((callback: any) => {
+              callback(prop, value);
+            });
           });
         });
       }

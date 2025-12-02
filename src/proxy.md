@@ -4,6 +4,8 @@ The `createProxy` is a utility used to track changes for top level array and obj
 
 Objects nested in a object do not support observers.
 
+`ele` must be within a `shadowRoot` as binded items are tracked by host instance.
+
 ```typescript
 const foo = {
     objLevel1: { objLevel2: 'old value' },

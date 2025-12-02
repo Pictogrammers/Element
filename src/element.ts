@@ -268,12 +268,10 @@ export function Prop(normalize?: (value: any) => any): any {
               throw new Error('Setting an array to itself is not allowed.');
             }
             const proxified = createProxy(this[symbol]);
-            if (proxified[hasObserver]) {
+            if (proxified[hasObserver](this)) {
               const unproxyValue = value[isProxy] ? value[getTarget] : value;
               proxified[swapObserver](this, unproxyValue);
               this[symbol] = value;
-              //proxified.splice(0, this[symbol].length, ...unproxyValue);
-              console.log('>>> trigger render???', this, propertyKey);
               // render(this, propertyKey); // do we need to trigger this for arrays being remapped?
             } else {
               this[symbol] = value;

@@ -264,7 +264,7 @@ describe("forEach double binding", () => {
         type() {
           return HelloMultiItem;
         }
-      })
+      });
     }
   }
 
