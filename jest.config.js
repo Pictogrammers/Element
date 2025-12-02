@@ -1,7 +1,7 @@
 export default {
-  testEnvironment: "jsdom",
+  testEnvironment: 'jsdom',
   transform: {
-    "^.+\.[jt]sx?$": ["ts-jest"],
+    "^.+\.[jt]sx?$": ['ts-jest'],
   },
   globals: {
     'ts-jest': {
