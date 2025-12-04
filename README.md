@@ -216,6 +216,8 @@ export default class HelloWorldButton extends HelloWorld {
 </button>
 ```
 
+If this extended component should be placed within the parent's template. Define `<child/>` in the parent template.
+
 ### CSS Styles (`worldButton.css`)
 
 ```css
