@@ -48,6 +48,8 @@ export function getProxyValue(obj: any) {
 function extendTemplate(base: string, append: string | null) {
   if (append && append.match(/<parent\/>/)) {
     return append.replace(/<parent\/>/, base);
+  } else if (base.match(/<child\/>/)) {
+    return base.replace(/<child\/>/, append || '');
   } else {
     return `${base}${append || ''}`;
   }
@@ -103,14 +105,19 @@ export function Component(config: CustomElementConfig = {}) {
           $template.innerHTML = cls.prototype[template] || '';
           const $node = document.importNode($template.content, true);
           const shadowRoot = this.attachShadow({ mode: 'open' });
-          shadowRoot.adoptedStyleSheets = cls.prototype[style].map((i: any) => {
-              if (i instanceof CSSStyleSheet) {
-                  return i;
+          shadowRoot.adoptedStyleSheets = cls.prototype[style].reduce((acc: any[], value: any) => {
+              if (!value) {
+                  return acc;
+              }
+              if (value instanceof CSSStyleSheet) {
+                  acc.push(value);
+                  return acc;
               }
               var s = new CSSStyleSheet();
-              s.replaceSync(i.toString());
-              return s;
-          });
+              s.replaceSync(value.toString());
+              acc.push(s);
+              return acc;
+          }, []);
           shadowRoot.appendChild($node);
         }
       } else if (this[init] && config.style) {
