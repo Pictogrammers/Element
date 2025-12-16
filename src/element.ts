@@ -507,17 +507,16 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   function newItem(item: any, itemIndex: number) {
     const comp = type(item);
     const $new = document.createElement(camelToDash(comp.name), comp);
-    const observedAttributes = comp.observedAttributes ?? [];
-    const props = intersect(Object.keys(item), observedAttributes);
-    if (observedAttributes.includes('index')) {
+    //const observedAttributes = comp.observedAttributes ?? [];
+    const allProps = Object.keys(comp.symbols);
+    const props = intersect(Object.keys(item), allProps);
+    if (allProps.includes('index')) {
       //@ts-ignore
       $new['index'] = itemIndex;
     }
-    let idx = props.indexOf('index');
-    if (idx !== -1) {
-      props.splice(props.indexOf('index'), 1);
-    }
     props.forEach((attr: string) => {
+      // index is already written
+      if (attr === 'index') { return; }
       //@ts-ignore
       $new[attr] = item[attr];
     });
