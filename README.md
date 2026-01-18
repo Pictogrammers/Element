@@ -14,15 +14,31 @@ To make things easier setup the project assuming the custom element `<hello-worl
 
 ```
 📂 src/
-  📂 hello/
-    📂 world/
-      📃 world.ts
-      📃 world.html
-      📃 world.css
+  📂 components/
+    📂 hello/
+      📂 app/
+        📃 app.ts
+        📃 app.html
+        📃 app.css
+      📂 world/
+        📃 world.ts
+        📃 world.html
+        📃 world.css
+  📃 index.html # optional
 📃 jest.config.json
 📃 package.json
 📃 tsconfig.json
-📃 webpack.config.js
+📃 element.config.js
+```
+
+### Config `element.config.js`
+
+To define a project define a root namespace. For full config see [docs](https://github.com/Pictogrammers/Element-esbuild).
+
+```typescript
+export default {
+  namespace: 'hello'
+}
 ```
 
 ### Class (`world.ts`)
@@ -172,15 +188,16 @@ Starting with a simple component can allow one to extend it with more features l
 
 ```
 📂 src/
-  📂 hello/
-    📂 world/
-      📃 world.ts
-      📃 world.html
-      📃 world.css
-    📂 worldButton/
-      📃 worldButton.ts
-      📃 worldButton.html
-      📃 worldButton.css
+  📂 components/
+    📂 hello/
+      📂 world/
+        📃 world.ts
+        📃 world.html
+        📃 world.css
+      📂 worldButton/
+        📃 worldButton.ts
+        📃 worldButton.html
+        📃 worldButton.css
 ```
 
 ### TypeScript (`worldButton.ts`)
