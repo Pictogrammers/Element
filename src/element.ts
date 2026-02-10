@@ -26,7 +26,6 @@ class PropError extends Error {
   constructor(message: string, ignore: any) {
     super(message);
     this.name = 'PropError';
-
     // @ts-ignore
     if (Error.captureStackTrace) {
       // @ts-ignore
@@ -40,6 +39,7 @@ const init = Symbol('init');
 const template = Symbol('template');
 const style = Symbol('style');
 const parent = Symbol('parent');
+const renderList = Symbol('renderList');
 
 export function getProxyValue(obj: any) {
   return obj[isProxy] && obj[getTarget];
@@ -74,17 +74,26 @@ export function Component(config: CustomElementConfig = {}) {
       writable: false,
       configurable: false,
     });
-    if (cls.prototype[parent] && !(cls.prototype[parent][cls.prototype[parent].length - 1] instanceof Object.getPrototypeOf(cls))) {
-      cls.prototype[parent].push(cls.prototype);
-      cls.prototype[style].push(config.style);
-      cls.prototype[template] = extendTemplate(
-        cls.prototype[template],
+    // ToDo: Clean up naming. cls is not used only render
+    if (cls[parent]) {
+      cls[parent] = [...cls[parent], cls];
+      if (cls.prototype.render) {
+        cls[renderList] = [...cls[renderList], cls.prototype.render];
+      }
+      if (config.style) {
+        cls[style] = [...cls[style], config.style];
+      }
+      cls[template] = extendTemplate(
+        cls[parent][cls[parent].length - 1][template],
         config.template || null
       );
     } else if (cls.prototype instanceof HTMLElement) {
-      cls.prototype[parent] = [cls.prototype];
-      cls.prototype[style] = config.style ? [config.style] : [];
-      cls.prototype[template] = config.template || '';
+      cls[parent] = [cls];
+      cls[renderList] = cls.prototype.render ? [cls.prototype.render] : [];
+      cls[style] = config.style ? [config.style] : [];
+      cls[template] = config.template || '';
+    } else {
+      throw new Error(`Must extend from HTMLElement`);
     }
 
     const connectedCallback = cls.prototype.connectedCallback || (() => { });
@@ -102,10 +111,10 @@ export function Component(config: CustomElementConfig = {}) {
           throw new Error('unsupported');
         } else {
           const $template = document.createElement('template');
-          $template.innerHTML = cls.prototype[template] || '';
+          $template.innerHTML = cls[template] || '';
           const $node = document.importNode($template.content, true);
           const shadowRoot = this.attachShadow({ mode: 'open' });
-          shadowRoot.adoptedStyleSheets = cls.prototype[style].reduce((acc: any[], value: any) => {
+          shadowRoot.adoptedStyleSheets = cls[style].reduce((acc: any[], value: any) => {
               if (!value) {
                   return acc;
               }
@@ -145,19 +154,17 @@ export function Component(config: CustomElementConfig = {}) {
           : customElements.whenDefined(tag);
       });
       const render = () => {
-        this[parent].map((p: any) => {
-          if (p.render) {
-            p.render.call(
-              this,
-              cls.observedAttributes
-                ? cls.observedAttributes.reduce((a: any, c: string) => {
-                  const n = dashToCamel(c);
-                  a[n] = true;
-                  return a;
-                }, {})
-                : {}
-            );
-          }
+        this.constructor[renderList].map((renderFn: any) => {
+          renderFn.call(
+            this,
+            cls.observedAttributes
+              ? cls.observedAttributes.reduce((a: any, c: string) => {
+                const n = dashToCamel(c);
+                a[n] = true;
+                return a;
+              }, {})
+              : {}
+          );
         });
       }
       if (promises.length === 0) {
@@ -220,10 +227,8 @@ function isObject(a: any) {
 
 function render(self: any, propertyKey: string) {
   if (self[init]) {
-    self[parent].map((p: any) => {
-      if (p.render) {
-        p.render.call(self, { [propertyKey]: true });
-      }
+    self.constructor[renderList].map((renderFn: any) => {
+      renderFn.call(self, { [propertyKey]: true });
     });
   }
 }
@@ -504,6 +509,9 @@ function difference(arr1: string[], arr2: string[]) {
 }
 
 export function forEach({ container, items, type, create, connect, disconnect, update }: ForEach) {
+  if (!Array.isArray(items)) {
+    throw new Error('forEach `items` must be an array');
+  }
   function newItem(item: any, itemIndex: number) {
     const comp = type(item);
     const $new = document.createElement(camelToDash(comp.name), comp);
@@ -534,7 +542,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
     connect && connect($new, createProxy(item));
   });
   // Handle each mutation
-  items[addObserver](container, (target: any, prop: any, args: any[]) => {
+  items[addObserver as any](container, (target: any, prop: any, args: any[]) => {
     if (prop === Mutation.swap) {
         const oldLength = items.length;
         items = createProxy(args[0]);
@@ -588,7 +596,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       case Mutation.splice:
         const [startIndex, deleteCount, ...newItems] = args;
         if (deleteCount > 0) {
-          for (let i = startIndex; i < deleteCount + startIndex; i++) {
+          for (let i = deleteCount + startIndex - 1; i >= startIndex; i--) {
             container.children[i].remove();
           }
         }
