@@ -328,7 +328,6 @@ export function Prop(normalize?: (value: any) => any): any {
             if (key === meta) {
               return this[symbolMeta];
             }
-            console.log('errr???')
             return Reflect.get(this[symbol], key);
           },
           set: (target, key, v) => {
@@ -512,6 +511,8 @@ export function forEach({ container, items, type, create, connect, disconnect, u
   if (!Array.isArray(items)) {
     throw new Error('forEach `items` must be an array');
   }
+  const elementMap = new WeakMap<object, HTMLElement>();
+
   function newItem(item: any, itemIndex: number) {
     const comp = type(item);
     const $new = document.createElement(camelToDash(comp.name), comp);
@@ -533,6 +534,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       // @ts-ignore
       $new[prop] = value;
     });
+    elementMap.set(item, $new);
     return $new;
   }
   // Add initial items
@@ -591,7 +593,14 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         }
         break;
       case Mutation.sort:
-        throw new Error('ToDo... write sort.')
+        (target as any[]).forEach((item: any) => {
+          const $el = elementMap.get(item);
+          if ($el) container.appendChild($el);
+        });
+        for (let i = 0; i < container.children.length; i++) {
+          // @ts-ignore
+          container.children[i].index = i;
+        }
         break;
       case Mutation.splice:
         const [startIndex, deleteCount, ...newItems] = args;
@@ -614,7 +623,7 @@ export function forEach({ container, items, type, create, connect, disconnect, u
             // @ts-ignore
             container.children[i].index = i;
           }
-          nItems.forEach(($new) => {
+          nItems.forEach(($new, i) => {
             connect && connect($new, newItems[i]);
           });
         } else {

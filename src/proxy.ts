@@ -10,7 +10,6 @@ type AddObserver = (host: HTMLElement, callback: AddObserverCallback) => void;
 type RemoveObserver = (host: HTMLElement) => void;
 
 const arrayMutate = ['fill', 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'];
-const arrayRead = ['forEach', 'slice', 'some', 'map', 'indexOf', 'lastIndexOf', 'width'];
 
 // key = obj                - observed object
 // value = Map
@@ -21,8 +20,6 @@ const arrayRead = ['forEach', 'slice', 'some', 'map', 'indexOf', 'lastIndexOf', 
 type ElementMap = Map<Element, any[]>;
 type HostMap = Map<Element, ElementMap>;
 const observers = new Map<any, HostMap>();
-//@ts-ignore
-window.observers = observers;
 
 type IsAny<T> = unknown extends T & string ? true : false;
 

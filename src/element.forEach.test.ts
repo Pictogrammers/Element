@@ -148,6 +148,21 @@ describe("forEach", () => {
     expect(($list.children[3] as HelloItem).index).toBe(3);
   });
 
+  test("items.sort", () => {
+    const component = selectComponent<HelloWorld>(HELLO_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 3 }, { count: 1 }, { count: 2 }];
+    expect($list.children.length).toBe(3);
+    component.items.sort((a: any, b: any) => a.count - b.count);
+    expect($list.children.length).toBe(3);
+    expect(($list.children[0] as HelloItem).count).toBe(1);
+    expect(($list.children[1] as HelloItem).count).toBe(2);
+    expect(($list.children[2] as HelloItem).count).toBe(3);
+    expect(($list.children[0] as HelloItem).index).toBe(0);
+    expect(($list.children[1] as HelloItem).index).toBe(1);
+    expect(($list.children[2] as HelloItem).index).toBe(2);
+  });
+
   test("items.push item reactivity", () => {
     const component = selectComponent<HelloWorld>(HELLO_WORLD);
     component.items.push({ count: 0 });
