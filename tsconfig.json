@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ESNext",
     "module": "CommonJS",
     "lib": ["ES2023", "ES6", "DOM"],
     "declaration": true,
@@ -15,10 +15,11 @@
     "strictPropertyInitialization": false,
   },
   "include": [
-    "src"
+    "src/element.ts",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
   ],
   "exclude": [
-    "node_modules",
-    "**/__tests__/*"
+    "node_modules"
   ]
 }

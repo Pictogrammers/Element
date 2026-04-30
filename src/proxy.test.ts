@@ -1,4 +1,4 @@
-import { describe, expect, test, jest } from '@jest/globals';
+import { describe, expect, test, vi } from 'vitest';
 
 import { createProxy, addObserver, removeObserver, isProxy } from "./proxy";
 
@@ -11,7 +11,7 @@ describe("createProxy", () => {
       value: 'item1'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     proxy.fill(
       { label: 'Item 2', value: 'item2' }
@@ -26,7 +26,7 @@ describe("createProxy", () => {
       value: 'item1'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     proxy.pop();
     expect(proxy.length).toBe(0);
@@ -40,7 +40,7 @@ describe("createProxy", () => {
       value: 'item1'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     proxy.push(
       { label: 'Item 2', value: 'item2' },
@@ -59,7 +59,7 @@ describe("createProxy", () => {
       value: 'item2'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     proxy.reverse();
     expect(proxy.length).toBe(2);
@@ -76,7 +76,7 @@ describe("createProxy", () => {
       value: 'item2'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     proxy.shift();
     expect(proxy.length).toBe(1);
@@ -93,7 +93,7 @@ describe("createProxy", () => {
       value: 'item2'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     const segment = proxy.slice(1, 2);
     expect(proxy.length).toBe(2);
@@ -107,7 +107,7 @@ describe("createProxy", () => {
       value: 'item1'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     proxy[removeObserver](ele);
     proxy.push({ label: 'Item 2', value: 'item2' });
@@ -120,7 +120,7 @@ describe("createProxy", () => {
       value: 'item1'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[0][addObserver](ele, observer);
     proxy[0].label = 'new';
     expect(observer).toHaveBeenCalledTimes(1);
@@ -133,7 +133,7 @@ describe("createProxy", () => {
       value: 'item1'
     }];
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[0][addObserver](ele, observer);
     proxy[0][removeObserver](ele);
     proxy[0].label = 'new';
@@ -150,7 +150,7 @@ describe("createProxy nested object", () => {
       }
     };
     const proxy = createProxy(items);
-    const observer = jest.fn();
+    const observer = vi.fn();
     proxy[addObserver](ele, observer);
     proxy.nestedObj = { value: 'new' };
   });

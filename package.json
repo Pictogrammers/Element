@@ -9,10 +9,9 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "run-s build:esm",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "prepublishOnly": "run-s build:esm",
-    "test": "jest"
+    "build": "tsc --project tsconfig.build.json",
+    "prepublishOnly": "tsc --project tsconfig.build.json",
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -30,12 +29,10 @@
   },
   "homepage": "https://github.com/Templarian/Element#readme",
   "devDependencies": {
-    "@jest/globals": "^30.3.0",
-    "jest": "30.3.0",
-    "jest-environment-jsdom": "^30.3.0",
+    "@babel/plugin-proposal-decorators": "^7.29.0",
+    "@rollup/plugin-babel": "^7.0.0",
     "jsdom": "^29.1.0",
-    "npm-run-all": "^4.1.5",
-    "ts-jest": "^29.4.9",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }
