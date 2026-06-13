@@ -512,16 +512,34 @@ export function forEach({ container, items, type, create, connect, disconnect, u
     throw new Error('forEach `items` must be an array');
   }
   const elementMap = new WeakMap<object, HTMLElement>();
+  // Tracks raw item objects in items-array order; used to recover pre-mutation state.
+  const localItems: any[] = [];
 
-  function newItem(item: any, itemIndex: number) {
+  function raw(item: any): any {
+    return item && (item as any)[isProxy] ? (item as any)[getTarget] : item;
+  }
+
+  function isRendered(rawItem: any): boolean {
+    return elementMap.has(rawItem);
+  }
+
+  function renderedCountBefore(logicalIndex: number): number {
+    let count = 0;
+    for (let i = 0; i < logicalIndex && i < localItems.length; i++) {
+      if (isRendered(localItems[i])) count++;
+    }
+    return count;
+  }
+
+  function newItem(item: any, domIndex: number): HTMLElement | null {
     const comp = type(item);
+    if (comp === null) return null;
     const $new = document.createElement(camelToDash(comp.name), comp);
-    //const observedAttributes = comp.observedAttributes ?? [];
     const allProps = Object.keys(comp.symbols);
     const props = intersect(Object.keys(item), allProps);
     if (allProps.includes('index')) {
       //@ts-ignore
-      $new['index'] = itemIndex;
+      $new['index'] = domIndex;
     }
     props.forEach((attr: string) => {
       // index is already written
@@ -529,126 +547,184 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       //@ts-ignore
       $new[attr] = item[attr];
     });
-    create && create($new, createProxy(item));
-    items[itemIndex][addObserver]($new, (prop: string, value: string) => {
+    const rawItem = raw(item);
+    create && create($new, createProxy(rawItem));
+    createProxy(rawItem)[addObserver as any]($new, (prop: string, value: string) => {
       // @ts-ignore
       $new[prop] = value;
     });
-    elementMap.set(item, $new);
+    elementMap.set(rawItem, $new);
     return $new;
   }
+
   // Add initial items
-  items.forEach((item: any, i: number) => {
-    const $new = newItem(item, i);
+  let initDomIndex = 0;
+  items.forEach((item: any) => {
+    const rawItem = raw(item);
+    localItems.push(rawItem);
+    const $new = newItem(item, initDomIndex);
+    if ($new === null) return;
     container.appendChild($new);
-    connect && connect($new, createProxy(item));
+    connect && connect($new, createProxy(rawItem));
+    initDomIndex++;
   });
+
   // Handle each mutation
   items[addObserver as any](container, (target: any, prop: any, args: any[]) => {
     if (prop === Mutation.swap) {
-        const oldLength = items.length;
+        const oldLength = localItems.length;
         items = createProxy(args[0]);
         // re-use splice to delete old nodes and add new ones (performance?)
         prop = Mutation.splice;
         args = [0, oldLength, ...args[0]];
     }
     switch(prop) {
-      case Mutation.fill:
-        // this could be optimized more, but would need the previous items keys
+      case Mutation.fill: {
         const [value, start, end] = args;
-        for (let i = start || 0; i < (end || items.length); i++) {
-          Object.keys(value).forEach((key) => {
-            // @ts-ignore
-            container.children[i][key] = value[key];
-          });
+        const fillStart = start || 0;
+        const fillEnd = end || localItems.length;
+        let domFillIdx = renderedCountBefore(fillStart);
+        for (let i = fillStart; i < fillEnd; i++) {
+          if (isRendered(localItems[i])) {
+            Object.keys(value).forEach((key) => {
+              // @ts-ignore
+              container.children[domFillIdx][key] = value[key];
+            });
+            domFillIdx++;
+          }
+          localItems[i] = value;
         }
         break;
-      case Mutation.pop:
-        const count = container.children.length;
-        if (count > 0) {
-          container.children[count - 1].remove();
+      }
+      case Mutation.pop: {
+        const poppedRaw = localItems[localItems.length - 1];
+        if (poppedRaw !== undefined && isRendered(poppedRaw)) {
+          container.children[container.children.length - 1].remove();
+          elementMap.delete(poppedRaw);
         }
+        localItems.pop();
         break;
-      case Mutation.push:
-        const last = container.children.length;
-        [...args].forEach((item: any, i) => {
-          const $new = newItem(item, last + i);
+      }
+      case Mutation.push: {
+        [...args].forEach((item: any) => {
+          const rawItem = raw(item);
+          localItems.push(rawItem);
+          const $new = newItem(item, container.children.length);
+          if ($new === null) return;
           container.appendChild($new);
-          connect && connect($new, createProxy(item));
+          connect && connect($new, createProxy(rawItem));
         });
         break;
-      case Mutation.reverse:
+      }
+      case Mutation.reverse: {
         for (var i = 1; i < container.children.length; i++){
           container.insertBefore(container.children[i], container.children[0]);
         }
+        localItems.reverse();
         break;
-      case Mutation.shift:
-        if (container.children.length) {
+      }
+      case Mutation.shift: {
+        const shiftedRaw = localItems[0];
+        if (shiftedRaw !== undefined && isRendered(shiftedRaw)) {
           container.children[0].remove();
+          elementMap.delete(shiftedRaw);
         }
-        // update every index
+        localItems.shift();
         for (let i = 0; i < container.children.length; i++) {
           // @ts-ignore
           container.children[i].index = i;
         }
         break;
-      case Mutation.sort:
+      }
+      case Mutation.sort: {
         (target as any[]).forEach((item: any) => {
-          const $el = elementMap.get(item);
+          const rawItem = raw(item);
+          const $el = elementMap.get(rawItem);
           if ($el) container.appendChild($el);
         });
         for (let i = 0; i < container.children.length; i++) {
           // @ts-ignore
           container.children[i].index = i;
         }
+        localItems.length = 0;
+        (target as any[]).forEach((item: any) => localItems.push(raw(item)));
         break;
-      case Mutation.splice:
+      }
+      case Mutation.splice: {
         const [startIndex, deleteCount, ...newItems] = args;
-        if (deleteCount > 0) {
-          for (let i = deleteCount + startIndex - 1; i >= startIndex; i--) {
-            container.children[i].remove();
-          }
+        if (startIndex < 0) {
+          throw new Error('invalid startIndex, must be greater than or equal to 0');
         }
-        let newCount = newItems.length || 0;
-        if (newCount > 0) {
-          const nItems = newItems.map((item: any, i: number) => {
-            return newItem(item, startIndex + i);
-          });
-          if (startIndex === 0) {
-            container.prepend(...nItems);
-          } else {
-            container.children[startIndex - 1].after(...nItems);
-          }
-          for (let i = startIndex - deleteCount + newCount; i < container.children.length; i++) {
-            // @ts-ignore
-            container.children[i].index = i;
-          }
-          nItems.forEach(($new, i) => {
-            connect && connect($new, newItems[i]);
-          });
-        } else {
-          for (let i = startIndex; i < container.children.length; i++) {
-            // @ts-ignore
-            container.children[i].index = i;
-          }
-        }
-        break;
-      case Mutation.unshift:
-        const first = container.children.length && container.children[0];
-        const newUnshifts = [...args].length;
-        [...args].forEach((item: any, i) => {
-          if (first) {
-            first.before(newItem(item, i));
-          } else {
-            container.appendChild(newItem(item, i));
+        // Determine the DOM insertion/deletion point by counting rendered items before startIndex.
+        const domStart = renderedCountBefore(startIndex);
+        // Remove deleted items from DOM (always remove at domStart since children shift up).
+        const deletedRaws = localItems.slice(startIndex, startIndex + deleteCount);
+        deletedRaws.forEach((rawItem) => {
+          if (isRendered(rawItem)) {
+            container.children[domStart].remove();
+            elementMap.delete(rawItem);
           }
         });
-        // update all index values after
-        for (let i = newUnshifts; i < container.children.length; i++) {
+        // Create elements for new items, skipping null-typed ones.
+        const nItems: HTMLElement[] = [];
+        newItems.forEach((item: any) => {
+          const $new = newItem(item, domStart + nItems.length);
+          if ($new !== null) nItems.push($new);
+        });
+        if (nItems.length > 0) {
+          if (domStart === 0) {
+            container.prepend(...nItems);
+          } else {
+            container.children[domStart - 1].after(...nItems);
+          }
+        }
+        // Update indices for all items from the insertion point onward.
+        for (let i = domStart; i < container.children.length; i++) {
           // @ts-ignore
           container.children[i].index = i;
         }
+        // Fire connect for each newly rendered item.
+        let nIdx = 0;
+        newItems.forEach((item: any) => {
+          const rawItem = raw(item);
+          if (isRendered(rawItem)) {
+            connect && connect(nItems[nIdx++], createProxy(rawItem));
+          }
+        });
+        localItems.splice(startIndex, deleteCount, ...newItems.map(raw));
         break;
+      }
+      case Mutation.unshift: {
+        const unshiftItems = [...args];
+        const firstChild = container.children.length ? container.children[0] : null;
+        const nItems: HTMLElement[] = [];
+        unshiftItems.forEach((item: any) => {
+          const $new = newItem(item, nItems.length);
+          if ($new !== null) nItems.push($new);
+        });
+        if (nItems.length > 0) {
+          if (firstChild) {
+            firstChild.before(...nItems);
+          } else {
+            container.append(...nItems);
+          }
+        }
+        // Update indices for all items (new ones first, then existing).
+        for (let i = 0; i < container.children.length; i++) {
+          // @ts-ignore
+          container.children[i].index = i;
+        }
+        localItems.unshift(...unshiftItems.map(raw));
+        // Fire connect for each newly rendered item.
+        let nIdx = 0;
+        unshiftItems.forEach((item: any) => {
+          const rawItem = raw(item);
+          if (isRendered(rawItem)) {
+            connect && connect(nItems[nIdx++], createProxy(rawItem));
+          }
+        });
+        break;
+      }
     }
   });
 }

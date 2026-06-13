@@ -177,6 +177,139 @@ describe("forEach", () => {
 
 });
 
+describe("forEach null type", () => {
+
+  const HELLO_NULL_ITEM = 'hello-null-item';
+
+  @Component({
+    selector: HELLO_NULL_ITEM,
+    template: '<span part="count"></span>'
+  })
+  class HelloNullItem extends HTMLElement {
+    @Prop() index: number;
+    @Prop() count: number = 0;
+    @Part() $count: HTMLSpanElement;
+
+    render() {
+      this.$count.textContent = `${this.count}`;
+    }
+  }
+
+  const HELLO_NULL_WORLD = 'hello-null-world';
+
+  @Component({
+    selector: HELLO_NULL_WORLD,
+    template: '<div part="list"></div>'
+  })
+  class HelloNullWorld extends HTMLElement {
+    @Prop() items: any[] = [];
+    @Part() $list: HTMLDivElement;
+
+    connectedCallback() {
+      forEach({
+        container: this.$list,
+        items: this.items,
+        type(item) {
+          return item.hidden ? null : HelloNullItem;
+        }
+      });
+    }
+  }
+
+  beforeEach(() => {
+    var c = document.createElement(HELLO_NULL_WORLD);
+    document.body.appendChild(c);
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  test('initial render skips null-typed items', () => {
+    const component = selectComponent<HelloNullWorld>(HELLO_NULL_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1 }, { count: 2, hidden: true }, { count: 3 }];
+    expect($list.children.length).toBe(2);
+    expect(($list.children[0] as HelloNullItem).count).toBe(1);
+    expect(($list.children[1] as HelloNullItem).count).toBe(3);
+    expect(($list.children[0] as HelloNullItem).index).toBe(0);
+    expect(($list.children[1] as HelloNullItem).index).toBe(1);
+  });
+
+  test('indices are contiguous among rendered items', () => {
+    const component = selectComponent<HelloNullWorld>(HELLO_NULL_WORLD);
+    const { $list } = component;
+    component.items = [
+      { count: 1 },
+      { count: 2, hidden: true },
+      { count: 3 },
+      { count: 4, hidden: true },
+      { count: 5 },
+    ];
+    expect($list.children.length).toBe(3);
+    expect(($list.children[0] as HelloNullItem).index).toBe(0);
+    expect(($list.children[1] as HelloNullItem).index).toBe(1);
+    expect(($list.children[2] as HelloNullItem).index).toBe(2);
+  });
+
+  test('push of null-typed item does not render', () => {
+    const component = selectComponent<HelloNullWorld>(HELLO_NULL_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1 }];
+    expect($list.children.length).toBe(1);
+    component.items.push({ count: 2, hidden: true });
+    expect($list.children.length).toBe(1);
+    component.items.push({ count: 3 });
+    expect($list.children.length).toBe(2);
+    expect(($list.children[1] as HelloNullItem).count).toBe(3);
+    expect(($list.children[1] as HelloNullItem).index).toBe(1);
+  });
+
+  test('pop of null-typed last item does not remove from DOM', () => {
+    const component = selectComponent<HelloNullWorld>(HELLO_NULL_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1 }, { count: 2, hidden: true }];
+    expect($list.children.length).toBe(1);
+    component.items.pop();
+    expect($list.children.length).toBe(1);
+    expect(($list.children[0] as HelloNullItem).count).toBe(1);
+  });
+
+  test('pop of rendered last item removes it from DOM', () => {
+    const component = selectComponent<HelloNullWorld>(HELLO_NULL_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1, hidden: true }, { count: 2 }];
+    expect($list.children.length).toBe(1);
+    component.items.pop();
+    expect($list.children.length).toBe(0);
+  });
+
+  test('shift of null-typed first item does not change DOM', () => {
+    const component = selectComponent<HelloNullWorld>(HELLO_NULL_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1, hidden: true }, { count: 2 }];
+    expect($list.children.length).toBe(1);
+    component.items.shift();
+    expect($list.children.length).toBe(1);
+    expect(($list.children[0] as HelloNullItem).count).toBe(2);
+    expect(($list.children[0] as HelloNullItem).index).toBe(0);
+  });
+
+  test('splice removing null-typed item does not change DOM', () => {
+    const component = selectComponent<HelloNullWorld>(HELLO_NULL_WORLD);
+    const { $list } = component;
+    component.items = [{ count: 1 }, { count: 2, hidden: true }, { count: 3 }];
+    expect($list.children.length).toBe(2);
+    component.items.splice(1, 1);
+    expect($list.children.length).toBe(2);
+    expect(($list.children[0] as HelloNullItem).count).toBe(1);
+    expect(($list.children[1] as HelloNullItem).count).toBe(3);
+  });
+
+});
+
 describe("forEach nested", () => {
 
   const HELLO_RECURSIVE = 'hello-recursive';
