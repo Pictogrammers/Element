@@ -507,6 +507,13 @@ function difference(arr1: string[], arr2: string[]) {
   return arr1.filter(str => !arr2.includes(str));
 }
 
+const PROP_ALIAS: Record<string, string> = { id: 'itemId' };
+
+function mapPropKey(key: string, allProps: string[]): string {
+  const alias = PROP_ALIAS[key];
+  return alias && allProps.includes(alias) ? alias : key;
+}
+
 export function forEach({ container, items, type, create, connect, disconnect, update }: ForEach) {
   if (!Array.isArray(items)) {
     throw new Error('forEach `items` must be an array');
@@ -547,11 +554,18 @@ export function forEach({ container, items, type, create, connect, disconnect, u
       //@ts-ignore
       $new[attr] = item[attr];
     });
+    // Apply prop aliases (e.g., data `id` → component `itemId`) when not already set above
+    for (const [dataKey, compKey] of Object.entries(PROP_ALIAS)) {
+      if (dataKey in item && allProps.includes(compKey) && !props.includes(compKey)) {
+        //@ts-ignore
+        $new[compKey] = item[dataKey];
+      }
+    }
     const rawItem = raw(item);
     create && create($new, createProxy(rawItem));
     createProxy(rawItem)[addObserver as any]($new, (prop: string, value: string) => {
       // @ts-ignore
-      $new[prop] = value;
+      $new[mapPropKey(prop, allProps)] = value;
     });
     elementMap.set(rawItem, $new);
     return $new;
@@ -586,9 +600,11 @@ export function forEach({ container, items, type, create, connect, disconnect, u
         let domFillIdx = renderedCountBefore(fillStart);
         for (let i = fillStart; i < fillEnd; i++) {
           if (isRendered(localItems[i])) {
+            const $child = container.children[domFillIdx] as any;
+            const childAllProps = Object.keys($child.constructor?.symbols ?? {});
             Object.keys(value).forEach((key) => {
               // @ts-ignore
-              container.children[domFillIdx][key] = value[key];
+              $child[mapPropKey(key, childAllProps)] = value[key];
             });
             domFillIdx++;
           }

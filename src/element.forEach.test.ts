@@ -463,3 +463,95 @@ describe("forEach double binding", () => {
   });
 
 });
+
+describe("forEach id alias", () => {
+
+  const HELLO_ID_ITEM = 'hello-id-item';
+
+  @Component({
+    selector: HELLO_ID_ITEM,
+    template: '<span part="label"></span>'
+  })
+  class HelloIdItem extends HTMLElement {
+    @Prop() index: number;
+    @Prop() itemId: string = '';
+    @Prop() label: string = '';
+    @Part() $label: HTMLSpanElement;
+
+    render(changes: any) {
+      if (changes.label) {
+        this.$label.textContent = this.label;
+      }
+    }
+  }
+
+  const HELLO_ID_WORLD = 'hello-id-world';
+
+  @Component({
+    selector: HELLO_ID_WORLD,
+    template: '<div part="list"></div>'
+  })
+  class HelloIdWorld extends HTMLElement {
+    @Prop() items: any[] = [];
+    @Part() $list: HTMLDivElement;
+
+    connectedCallback() {
+      forEach({
+        container: this.$list,
+        items: this.items,
+        type() { return HelloIdItem; }
+      });
+    }
+  }
+
+  beforeEach(() => {
+    document.body.appendChild(document.createElement(HELLO_ID_WORLD));
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+  });
+
+  test('data `id` maps to component `itemId` on initial render', () => {
+    const component = selectComponent<HelloIdWorld>(HELLO_ID_WORLD);
+    component.items = [{ id: 'abc', label: 'Hello' }];
+    const item = component.$list.children[0] as HelloIdItem;
+    expect(item.itemId).toBe('abc');
+    expect(item.label).toBe('Hello');
+  });
+
+  test('data `id` maps to component `itemId` on push', () => {
+    const component = selectComponent<HelloIdWorld>(HELLO_ID_WORLD);
+    component.items.push({ id: 'xyz', label: 'World' });
+    const item = component.$list.children[0] as HelloIdItem;
+    expect(item.itemId).toBe('xyz');
+  });
+
+  test('reactive update to data `id` propagates to component `itemId`', () => {
+    const component = selectComponent<HelloIdWorld>(HELLO_ID_WORLD);
+    component.items = [{ id: 'foo', label: 'Test' }];
+    const item = component.$list.children[0] as HelloIdItem;
+    expect(item.itemId).toBe('foo');
+    component.items[0].id = 'bar';
+    expect(item.itemId).toBe('bar');
+  });
+
+  test('fill with `id` updates component `itemId`', () => {
+    const component = selectComponent<HelloIdWorld>(HELLO_ID_WORLD);
+    component.items = [{ id: 'a', label: 'first' }];
+    component.items.fill({ id: 'b', label: 'second' });
+    const item = component.$list.children[0] as HelloIdItem;
+    expect(item.itemId).toBe('b');
+    expect(item.label).toBe('second');
+  });
+
+  test('explicit `itemId` in data takes precedence over aliased `id`', () => {
+    const component = selectComponent<HelloIdWorld>(HELLO_ID_WORLD);
+    component.items = [{ id: 'ignored', itemId: 'explicit', label: 'Test' }];
+    const item = component.$list.children[0] as HelloIdItem;
+    expect(item.itemId).toBe('explicit');
+  });
+
+});

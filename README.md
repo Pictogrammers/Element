@@ -116,6 +116,8 @@ set selected(value: string | boolean) {
 - `normalizeBoolean` - Handles `bool` type including string `'true'` / `'false'`.
 - `normalizeString` - Wrapper for `` `${value}` ``.
 
+> **Note:** Quality of life `id` in objects is always mapped to `itemId` as to not set duplicate element attribute `id` values.
+
 ### Template Loops
 
 Components can create repeated lists of other components by using the `forEach` utility. Any updates will sync values to the component provided in the type function.
